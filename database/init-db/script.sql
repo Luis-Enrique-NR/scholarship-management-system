@@ -4,6 +4,10 @@
 -- Habilitar la extensión para generar UUIDs automáticamente
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+------------------------------------------------------------------------------
+-- CREACIÓN DE TABLAS
+------------------------------------------------------------------------------
+
 CREATE TABLE usuarios (
     -- Usamos uuid_generate_v4() para que el ID se cree solo si no lo envías
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -197,3 +201,65 @@ create table matriculas (
 	constraint fk_matricula_seccion foreign key (id_seccion) references secciones(id),
 	constraint fk_matricula_empleado foreign key (id_empleado) references empleados(id)
 );
+
+-- TRIGGERS PARA AUDITORIA
+
+--------------------------------------------------------------------------------
+-- 1. FUNCIÓN GENÉRICA PARA ACTUALIZAR EL TIMESTAMP
+--------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_update_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+--------------------------------------------------------------------------------
+-- 2. ASIGNACIÓN DE TRIGGERS A LAS TABLAS CON updated_at
+--------------------------------------------------------------------------------
+
+-- Auditoría de Usuarios
+CREATE TRIGGER trg_usuarios_updated_at
+BEFORE UPDATE ON usuarios
+FOR EACH ROW EXECUTE FUNCTION fn_update_timestamp();
+
+-- Auditoría de Empleados
+CREATE TRIGGER trg_empleados_updated_at
+BEFORE UPDATE ON empleados
+FOR EACH ROW EXECUTE FUNCTION fn_update_timestamp();
+
+-- Auditoría de Convocatorias
+CREATE TRIGGER trg_convocatorias_updated_at
+BEFORE UPDATE ON convocatorias
+FOR EACH ROW EXECUTE FUNCTION fn_update_timestamp();
+
+-- Auditoría de Cursos
+CREATE TRIGGER trg_cursos_updated_at
+BEFORE UPDATE ON cursos
+FOR EACH ROW EXECUTE FUNCTION fn_update_timestamp();
+
+-- Auditoría de Secciones
+CREATE TRIGGER trg_secciones_updated_at
+BEFORE UPDATE ON secciones
+FOR EACH ROW EXECUTE FUNCTION fn_update_timestamp();
+
+-- Auditoría de Estudiantes
+CREATE TRIGGER trg_estudiantes_updated_at
+BEFORE UPDATE ON estudiantes
+FOR EACH ROW EXECUTE FUNCTION fn_update_timestamp();
+
+-- Auditoría de Evaluaciones Socioeconómicas
+CREATE TRIGGER trg_evaluaciones_socio_updated_at
+BEFORE UPDATE ON evaluaciones_socioeconomicas
+FOR EACH ROW EXECUTE FUNCTION fn_update_timestamp();
+
+-- Auditoría de Promedios Ponderados
+CREATE TRIGGER trg_promedios_updated_at
+BEFORE UPDATE ON promedios_ponderados
+FOR EACH ROW EXECUTE FUNCTION fn_update_timestamp();
+
+-- Auditoría de Matrículas
+CREATE TRIGGER trg_matriculas_updated_at
+BEFORE UPDATE ON matriculas
+FOR EACH ROW EXECUTE FUNCTION fn_update_timestamp();
