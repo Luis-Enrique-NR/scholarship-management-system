@@ -1,4 +1,4 @@
-package pe.com.learning.security.exception;
+package pe.com.security.scholarship.exception;
 
 import org.springframework.http.HttpStatus;
 

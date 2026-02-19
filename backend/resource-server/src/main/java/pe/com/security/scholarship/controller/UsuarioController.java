@@ -1,4 +1,4 @@
-package pe.com.learning.security.controller;
+package pe.com.security.scholarship.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -10,12 +10,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import pe.com.learning.security.dto.request.CreateConvocatoriaRequest;
-import pe.com.learning.security.dto.request.CreatePostulacionRequest;
-import pe.com.learning.security.entity.Convocatoria;
-import pe.com.learning.security.entity.Matricula;
-import pe.com.learning.security.entity.Postulacion;
-import pe.com.learning.security.util.ApiResponse;
+import pe.com.security.scholarship.dto.request.CreateConvocatoriaRequest;
+import pe.com.security.scholarship.dto.request.CreatePostulacionRequest;
+import pe.com.security.scholarship.entity.Convocatoria;
+import pe.com.security.scholarship.entity.Matricula;
+import pe.com.security.scholarship.entity.Postulacion;
+import pe.com.security.scholarship.util.ApiResponse;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;

@@ -1,4 +1,4 @@
-package pe.com.learning.security.config;
+package pe.com.security.scholarship.config;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.cache.CacheManager;

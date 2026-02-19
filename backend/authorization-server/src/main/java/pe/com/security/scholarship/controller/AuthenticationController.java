@@ -1,7 +1,5 @@
-package pe.com.learning.security.controller;
+package pe.com.security.scholarship.controller;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -11,14 +9,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import pe.com.learning.security.dto.request.AuthLoginRequest;
-import pe.com.learning.security.dto.request.AuthRegisterRequest;
-import pe.com.learning.security.dto.request.TokenRefreshRequest;
-import pe.com.learning.security.dto.request.UpdatePasswordRequest;
-import pe.com.learning.security.dto.response.AuthResponse;
-import pe.com.learning.security.dto.response.NewUserResponse;
-import pe.com.learning.security.service.AuthenticationService;
-import pe.com.learning.security.util.ApiResponse;
+import pe.com.security.scholarship.dto.request.RegisterUserRequest;
+import pe.com.security.scholarship.dto.request.UpdatePasswordRequest;
+import pe.com.security.scholarship.dto.response.RegisteredUserResponse;
+import pe.com.security.scholarship.service.AuthenticationService;
+import pe.com.security.scholarship.util.ApiResponse;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -29,9 +24,9 @@ public class AuthenticationController {
   private final AuthenticationService authenticationService;
 
   //@Operation(summary = "Registro de usuario", description = "Crear una cuenta activa con un JWT válido")
-  @PostMapping("/register")
-  public ResponseEntity<ApiResponse<NewUserResponse>> register(@Valid @RequestBody AuthRegisterRequest request) {
-    NewUserResponse response = authenticationService.register(request);
+  @PostMapping("/register/estudiante")
+  public ResponseEntity<ApiResponse<RegisteredUserResponse>> registerStudent(@Valid @RequestBody RegisterUserRequest request) {
+    RegisteredUserResponse response = authenticationService.registerStudent(request);
     return ResponseEntity.ok(new ApiResponse<>("Registro exitoso. Ya puede iniciar sesión.", "200", response));
   }
 

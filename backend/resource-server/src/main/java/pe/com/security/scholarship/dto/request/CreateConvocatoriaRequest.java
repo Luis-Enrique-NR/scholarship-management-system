@@ -1,4 +1,4 @@
-package pe.com.learning.security.dto.request;
+package pe.com.security.scholarship.dto.request;
 
 import lombok.Data;
 

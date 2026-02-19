@@ -1,4 +1,4 @@
-package pe.com.learning.security.config;
+package pe.com.security.scholarship.config;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,7 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
-import pe.com.learning.security.util.ApiResponse;
+import pe.com.security.scholarship.util.ApiResponse;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
