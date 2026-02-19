@@ -1,12 +1,22 @@
-# Ignorar todos los archivos de variables de entorno en cualquier carpeta
+# --- VARIABLES DE ENTORNO ---
 .env
 .env.local
 .env.*.local
-
-# Específicamente si tienes nombres personalizados
 database/.env
 backend/.env
 frontend/.env
-
-# No ignores los archivos de ejemplo (esto es buena práctica)
 !.env.example
+
+# --- IDEs (VS Code, IntelliJ, Eclipse) ---
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+
+# --- BACKEND (Maven/Gradle estándar) ---
+# Ignora carpetas de compilación en cualquier nivel de subcarpeta
+**/target/
+**/build/
+**/bin/
+**/out/

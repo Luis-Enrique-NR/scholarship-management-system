@@ -1,4 +1,4 @@
-package pe.com.learning.security.config;
+package pe.com.security.scholarship.config;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;

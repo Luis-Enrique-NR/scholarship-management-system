@@ -1,4 +1,4 @@
-package pe.com.learning.security.config;
+package pe.com.security.scholarship.config;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -20,36 +20,36 @@ public class OpenApiConfig {
   public OpenAPI customOpenAPI() {
     return new OpenAPI()
             .info(new Info()
-                    .title("Learning API - Documentation")
-                    .description("Servidor de Recursos y Autorización con Spring Boot 3 & OAuth2")
-                    .version("1.0.0")
-                    .contact(new Contact().name("Support Team").email("soporte@learning.com.pe")))
-            // Configuramos el esquema de seguridad como OAuth2
-            .addSecurityItem(new SecurityRequirement().addList("OAuth2_Security"))
+                    .title("Scholarship Identity Server")
+                    .description("Servidor de Identidad - Obtén aquí tu token para el Resource Server")
+                    .version("1.0.0"))
+            // El SecurityRequirement activa el candado globalmente
+            .addSecurityItem(new SecurityRequirement().addList("OAuth2_Auth_Code"))
             .components(new Components()
-                    .addSecuritySchemes("OAuth2_Security",
+                    .addSecuritySchemes("OAuth2_Auth_Code",
                             new SecurityScheme()
-                                    .name("OAuth2_Security")
+                                    .name("OAuth2_Auth_Code")
                                     .type(SecurityScheme.Type.OAUTH2)
-                                    .description("Autenticación basada en el flujo de Authorization Code")
+                                    .description("Flujo de código de autorización")
                                     .flows(new OAuthFlows()
                                             .authorizationCode(new OAuthFlow()
-                                                    .authorizationUrl("http://localhost:8080/oauth2/authorize")
-                                                    .tokenUrl("http://localhost:8080/oauth2/token")
+                                                    .authorizationUrl("http://localhost:9000/oauth2/authorize")
+                                                    .tokenUrl("http://localhost:9000/oauth2/token")
                                                     .scopes(new Scopes()
-                                                            .addString("read", "Permiso de lectura")
-                                                            .addString("write", "Permiso de escritura"))
+                                                            .addString("openid", "Información de identidad")
+                                                            .addString("read", "Acceso de lectura")
+                                                            .addString("write", "Acceso de escritura"))
                                             )
                                     )
                     ));
   }
 
   @Bean
-  public GroupedOpenApi publicAPI() {
+  public GroupedOpenApi authAPI() {
     return GroupedOpenApi.builder()
-            .group("learning-api")
-            .packagesToScan("pe.com.learning.security.controller")
-            .pathsToMatch("/api/**") // Solo documentamos nuestras APIs de negocio
+            .group("scholarship-auth")
+            // Aquí escaneamos los controladores de autenticación
+            .pathsToMatch("/api/v1/auth/**")
             .build();
   }
 }

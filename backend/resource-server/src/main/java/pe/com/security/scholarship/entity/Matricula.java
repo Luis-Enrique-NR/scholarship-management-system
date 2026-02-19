@@ -1,4 +1,4 @@
-package pe.com.learning.security.entity;
+package pe.com.security.scholarship.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

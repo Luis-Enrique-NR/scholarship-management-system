@@ -1,12 +1,8 @@
-package pe.com.learning.security.config;
+package pe.com.security.scholarship.config;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.security.OAuthFlow;
-import io.swagger.v3.oas.models.security.OAuthFlows;
-import io.swagger.v3.oas.models.security.Scopes;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springdoc.core.models.GroupedOpenApi;
@@ -20,36 +16,26 @@ public class OpenApiConfig {
   public OpenAPI customOpenAPI() {
     return new OpenAPI()
             .info(new Info()
-                    .title("Learning API - Documentation")
-                    .description("Servidor de Recursos y Autorización con Spring Boot 3 & OAuth2")
-                    .version("1.0.0")
-                    .contact(new Contact().name("Support Team").email("soporte@learning.com.pe")))
-            // Configuramos el esquema de seguridad como OAuth2
-            .addSecurityItem(new SecurityRequirement().addList("OAuth2_Security"))
+                    .title("Scholarship Resource Server API")
+                    .description("APIs de Negocio protegidas por JWT")
+                    .version("1.0.0"))
+            // Añadimos el requisito de seguridad global
+            .addSecurityItem(new SecurityRequirement().addList("Bearer_Token"))
             .components(new Components()
-                    .addSecuritySchemes("OAuth2_Security",
+                    .addSecuritySchemes("Bearer_Token",
                             new SecurityScheme()
-                                    .name("OAuth2_Security")
-                                    .type(SecurityScheme.Type.OAUTH2)
-                                    .description("Autenticación basada en el flujo de Authorization Code")
-                                    .flows(new OAuthFlows()
-                                            .authorizationCode(new OAuthFlow()
-                                                    .authorizationUrl("http://localhost:8080/oauth2/authorize")
-                                                    .tokenUrl("http://localhost:8080/oauth2/token")
-                                                    .scopes(new Scopes()
-                                                            .addString("read", "Permiso de lectura")
-                                                            .addString("write", "Permiso de escritura"))
-                                            )
-                                    )
-                    ));
+                                    .name("Bearer_Token")
+                                    .type(SecurityScheme.Type.HTTP)
+                                    .scheme("bearer")
+                                    .bearerFormat("JWT")
+                                    .description("Copia el 'access_token' obtenido del Auth Server (Puerto 9000)")));
   }
 
   @Bean
-  public GroupedOpenApi publicAPI() {
+  public GroupedOpenApi businessAPI() {
     return GroupedOpenApi.builder()
-            .group("learning-api")
-            .packagesToScan("pe.com.learning.security.controller")
-            .pathsToMatch("/api/**") // Solo documentamos nuestras APIs de negocio
+            .group("scholarship-business")
+            .pathsToMatch("/api/**") // Tus rutas de negocio
             .build();
   }
 }

@@ -75,7 +75,7 @@ public class SecurityConfig {
                     // 1. El registro es PÚBLICO
                     .requestMatchers("/api/v1/auth/register/**").permitAll()
                     // 2. Swagger y recursos estáticos son PÚBLICOS
-                    .requestMatchers("/v3/api-docs/**", "/swagger-ui/**").permitAll()
+                    .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/oauth2-redirect.html").permitAll()
                     // 3. El resto (como /password) requiere AUTH
                     .anyRequest().authenticated()
             )

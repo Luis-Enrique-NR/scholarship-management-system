@@ -1,4 +1,4 @@
-package pe.com.learning.security.util;
+package pe.com.security.scholarship.util;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
