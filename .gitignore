@@ -1,0 +1,12 @@
+# Ignorar todos los archivos de variables de entorno en cualquier carpeta
+.env
+.env.local
+.env.*.local
+
+# Específicamente si tienes nombres personalizados
+database/.env
+backend/.env
+frontend/.env
+
+# No ignores los archivos de ejemplo (esto es buena práctica)
+!.env.example
