@@ -1,0 +1,2 @@
+"id";"id_client";"name_client";"secret_client";"scopes";"grant_types";"authentication_methods";"redirect_uri";"redirect_uri_logout"
+"4d9dd9d2-1cf6-4abd-8941-813e9dc8d516";testClient;test client;$2a$10$YZ019RmKAUPpibb8fXUXU.4IzPsPbWb8lSPSk5D8mCIe7ATARiVHm;read,write;authorization_code,refresh_token;client_secret_basic,client_secret_jwt,client_secret_post;https://oauthdebugger.com/debug,http://localhost:9000/swagger-ui/oauth2-redirect.html;https://springone.io/authorized
