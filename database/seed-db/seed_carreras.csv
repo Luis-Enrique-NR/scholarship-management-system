@@ -1,0 +1,31 @@
+"id";"nombre";"codigo_facultad"
+1;Arquitectura;FAUA
+2;Ciencia de la Computación;FC
+3;Ingeniería Física;FC
+4;Física;FC
+5;Matemática;FC
+6;Química;FC
+7;Ingeniería Ambiental;FIA
+8;Ingeniería Sanitaria;FIA
+9;Ingeniería de Higiene y Seguridad Industrial;FIA
+10;Ingeniería Civil;FIC
+11;Ingeniería Económica;FIEECS
+12;Ingeniería Estadística;FIEECS
+13;Ingeniería Eléctrica;FIEE
+14;Ingeniería Electrónica;FIEE
+15;Ingeniería de Telecomunicaciones;FIEE
+16;Ingeniería de Ciberseguridad;FIEE
+17;Ingeniería Geológica;FIGMM
+18;Ingeniería de Minas;FIGMM
+19;Ingeniería Metalúrgica;FIGMM
+20;Ingeniería Industrial;FIIS
+21;Ingeniería de Sistemas;FIIS
+23;Ingeniería Mecánica;FIM
+24;Ingeniería Mecánica-Eléctrica;FIM
+25;Ingeniería Naval;FIM
+26;Ingeniería Mecatrónica;FIM
+27;Ingeniería de Petróleo y Gas Natural;FIP
+28;Ingeniería Petroquímica;FIP
+29;Ingeniería Química;FIQT
+30;Ingeniería Textil;FIQT
+22;Ingeniería de Software;FIIS

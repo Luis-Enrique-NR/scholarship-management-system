@@ -1,0 +1,31 @@
+id;nombre;codigo;modalidad
+1;Excel Básico y Avanzado;EXCB1;PRESENCIAL
+2;Programación en Python para Todos;PYT01;ONLINE
+3;Administración de Bases de Datos SQL;SQLAD;PRESENCIAL
+4;Desarrollo Web con HTML, CSS y JavaScript;WEBF1;ONLINE
+5;Fundamentos de Redes Cisco CCNA;NETCC;PRESENCIAL
+6;Introducción a la Programación en Java;JAV01;ONLINE
+7;Power BI – Análisis y Visualización de Datos;PBI01;PRESENCIAL
+8;Desarrollo de Aplicaciones Móviles con Flutter;FLUT1;ONLINE
+9;Seguridad Informática y Ethical Hacking;SEC01;PRESENCIAL
+10;Administración de SQL Server – Nivel Intermedio;SQLS2;ONLINE
+11;React.js – Desarrollo Frontend Moderno;REACT;PRESENCIAL
+12;Machine Learning con Python y Scikit-Learn;MLPY1;ONLINE
+13;Automatización con RPA (UiPath);RPA01;PRESENCIAL
+14;AWS Cloud Practitioner – Fundamentos;AWSCP;ONLINE
+15;Gestión de Proyectos con PMP y Agile;PMPAG;PRESENCIAL
+16;Desarrollo Backend con Node.js y Express;NODE1;ONLINE
+17;Análisis de Datos con Excel Avanzado y Power Query;EXPAQ;PRESENCIAL
+18;Programación en C# y .NET;CSNET;ONLINE
+19;Linux Administración de Sistemas;LINUX;PRESENCIAL
+20;Inteligencia Artificial – Introducción Práctica;IAINT;ONLINE
+21;Tableau para Visualización de Datos;TAB01;PRESENCIAL
+22;DevOps y CI/CD con Docker y Kubernetes;DEVOP;ONLINE
+23;Diseño UX/UI con Figma;UXF01;PRESENCIAL
+24;Big Data con Hadoop y Spark;BIGDA;ONLINE
+25;Marketing Digital – Estrategias y Herramientas;MKTD1;PRESENCIAL
+26;Programación en Go (Golang);GO001;ONLINE
+27;Cyberseguridad – Defensa de Redes;CYBER;PRESENCIAL
+28;Angular – Desarrollo Frontend Avanzado;ANG01;ONLINE
+29;Gestión de Bases de Datos NoSQL (MongoDB);NOSQL;PRESENCIAL
+30;Data Science con R y Estadística Aplicada;DSR01;ONLINE
