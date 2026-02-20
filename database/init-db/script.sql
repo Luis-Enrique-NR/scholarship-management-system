@@ -75,9 +75,11 @@ CREATE TABLE empleados (
 
 create table convocatorias (
 	id SERIAL primary key,
+	mes VARCHAR(10) not null,
 	fecha_inicio date not null,
 	fecha_fin date not null,
 	estado varchar(10) not null,
+	cantidad_vacantes INT NOT null,
 	
 	created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ,
@@ -86,7 +88,7 @@ create table convocatorias (
     CONSTRAINT fk_convocatoria_creator FOREIGN KEY (created_by) REFERENCES empleados(id)
 );
 
-create table cursos (
+create table cursos (	
 	id SERIAL primary key,
 	nombre VARCHAR(90) not null,
 	codigo VARCHAR(5) not null,
@@ -144,6 +146,7 @@ create table evaluaciones_socioeconomicas (
 	id_estudiante UUID not null,
 	fecha_evaluacion DATE,
 	nivel_socioeconomico VARCHAR(10),
+	fecha_expiracion DATE,
 	
 	created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ,
