@@ -27,6 +27,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UsuarioController {
 
+  /*
   // Mostrar convocatoria: Todos
 
   @GetMapping("/convocatorias")
@@ -51,6 +52,8 @@ public class UsuarioController {
     return ResponseEntity.ok(new ApiResponse<>("Registro exitoso", "200", convocatoria));
   }
 
+   */
+
   // Postular convocatoria: Estudiante
 
   @PostMapping("/postulaciones")
@@ -58,10 +61,10 @@ public class UsuarioController {
   public ResponseEntity<ApiResponse<Postulacion>> postularConvocatoria(
           @RequestBody CreatePostulacionRequest dto
   ) {
-    Convocatoria convocatoria  = new Convocatoria(1L, "Junio", LocalDate.parse("2026-05-26"),
-            LocalDate.parse("2026-05-30"), "Aperturado");
+    //Convocatoria convocatoria  = new Convocatoria(1L, "Junio", LocalDate.parse("2026-05-26"),
+      //      LocalDate.parse("2026-05-30"), "Aperturado");
 
-    Postulacion postulacion = new Postulacion(1L, dto.getCursoOpcion(), LocalDateTime.now(),convocatoria);
+    Postulacion postulacion = new Postulacion(1L, dto.getCursoOpcion(), LocalDateTime.now());//,convocatoria);
 
     return ResponseEntity.ok(new ApiResponse<>("Registro exitoso", "200", postulacion));
   }
@@ -70,16 +73,16 @@ public class UsuarioController {
 
   @PatchMapping("/convocatorias/{idConvocatoria}/{estado}")
   @PreAuthorize("hasRole('SOCIAL_OUTREACH_MANAGER')")
-  public ResponseEntity<ApiResponse<Convocatoria>> cerrarConvocatoria(
+  public ResponseEntity<ApiResponse<String>> cerrarConvocatoria(
           @PathVariable Long idConvocatoria,
           @PathVariable String estado
   ) {
-    Convocatoria convocatoria  = new Convocatoria(idConvocatoria, "Junio", LocalDate.parse("2026-05-26"),
-            LocalDate.parse("2026-05-30"), "Aperturado");
+    //Convocatoria convocatoria  = new Convocatoria(idConvocatoria, "Junio", LocalDate.parse("2026-05-26"),
+     //       LocalDate.parse("2026-05-30"), "Aperturado");
 
-    convocatoria.setEstado(estado);
+    //convocatoria.setEstado(estado);
 
-    return ResponseEntity.ok(new ApiResponse<>("Actualización exitosa", "200", convocatoria));
+    return ResponseEntity.ok(new ApiResponse<>("Actualización exitosa", "200", null));// convocatoria));
   }
 
   // Subir nota: Secretaria Sistemas UNI
