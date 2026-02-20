@@ -3,14 +3,9 @@ package pe.com.security.scholarship.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,42 +15,33 @@ import lombok.Setter;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-import pe.com.security.scholarship.entity.enums.EstadoConvocatoria;
-import pe.com.security.scholarship.entity.enums.Mes;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Entity
-@Table(name = "convocatorias")
+@Table(name = "empleados")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 @EntityListeners(AuditingEntityListener.class)
-public class Convocatoria {
+public class Empleado {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Integer id;
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private UUID id;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private Mes mes;
+  @Column(nullable = false, unique = true)
+  private UUID idUsuario;
 
-  @Column(nullable = false)
-  private LocalDate fechaInicio;
-
-  @Column(nullable = false)
-  private LocalDate fechaFin;
-
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private EstadoConvocatoria estado;
+  @Column(nullable = false, unique = true, length = 20)
+  private String codigoEmpleado;
 
   @Column(nullable = false)
-  private Integer cantidadVacantes;
+  private LocalDate fechaIngreso;
 
   @CreatedDate
   @Column(nullable = false, updatable = false)
@@ -64,7 +50,5 @@ public class Convocatoria {
   @UpdateTimestamp
   private Instant updatedAt;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "created_by", nullable = false)
-  private Empleado createdBy;
+  private UUID createdBy; // Empleado que lo registró
 }

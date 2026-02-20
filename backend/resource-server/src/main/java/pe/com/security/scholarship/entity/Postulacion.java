@@ -21,5 +21,5 @@ public class Postulacion {
 
   private LocalDateTime fechaPostulacion;
 
-  private Convocatoria convocatoria;
+  //  private Convocatoria convocatoria;
 }
