@@ -9,9 +9,17 @@ import org.springframework.transaction.annotation.Transactional;
 import pe.com.security.scholarship.entity.Convocatoria;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ConvocatoriaRepository extends JpaRepository<Convocatoria, Integer> {
+
+  @Query("SELECT c FROM Convocatoria c WHERE c.estado = 'APERTURADO'")
+  Optional<Convocatoria> findConvocatoriaAperturada();
+
+  @Query("SELECT c FROM Convocatoria c WHERE YEAR(c.fechaInicio) = :year")
+  List<Convocatoria> findByYear(@Param("year") Integer year);
 
   @Modifying
   @Transactional

@@ -35,8 +35,7 @@ public class SecurityConfig {
                     // Rutas públicas de Swagger
                     .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                     // Rutas de negocio públicas
-                    .requestMatchers("/api/v1/auth/register").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/usuario/convocatorias").permitAll()
+                    .requestMatchers("/api/v1/convocatorias/activa").permitAll()
                     // El resto requiere autenticación
                     .anyRequest().authenticated()
             )

@@ -56,7 +56,7 @@ class ConvocatoriaControllerTest {
         when(convocatoriaService.registerConvocatoria(any(RegisterConvocatoriaRequest.class))).thenReturn(response);
 
         // Act & Assert
-        mockMvc.perform(post("/api/convocatorias")
+        mockMvc.perform(post("/api/v1/convocatorias")
                         .with(csrf()) // Importante para POST/PUT/DELETE
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -75,7 +75,7 @@ class ConvocatoriaControllerTest {
         // Missing required fields to trigger validation error
 
         // Act & Assert
-        mockMvc.perform(post("/api/convocatorias")
+        mockMvc.perform(post("/api/v1/convocatorias")
                         .with(csrf()) // Importante para POST/PUT/DELETE
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
