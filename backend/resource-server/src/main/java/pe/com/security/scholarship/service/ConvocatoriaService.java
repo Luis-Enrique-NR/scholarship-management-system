@@ -1,7 +1,6 @@
 package pe.com.security.scholarship.service;
 
 import lombok.RequiredArgsConstructor;
-import org.hibernate.NonUniqueResultException;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
@@ -17,6 +16,8 @@ import pe.com.security.scholarship.dto.response.HistorialConvocatoriaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredConvocatoriaResponse;
 import pe.com.security.scholarship.entity.Convocatoria;
 import pe.com.security.scholarship.entity.Empleado;
+import pe.com.security.scholarship.entity.enums.EstadoConvocatoria;
+import pe.com.security.scholarship.exception.BadRequestException;
 import pe.com.security.scholarship.exception.ConflictException;
 import pe.com.security.scholarship.exception.NotFoundException;
 import pe.com.security.scholarship.mapper.ConvocatoriaMapper;
@@ -25,6 +26,8 @@ import pe.com.security.scholarship.repository.EmpleadoRepository;
 import pe.com.security.scholarship.util.SecurityUtils;
 
 import java.time.LocalDate;
+import java.time.Year;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,10 +41,36 @@ public class ConvocatoriaService {
 
   @Transactional
   public RegisteredConvocatoriaResponse registerConvocatoria(RegisterConvocatoriaRequest request) {
+    if (!request.getFechaFin().isAfter(request.getFechaInicio())) {
+      throw new BadRequestException("La fecha de finalización debe ser posterior a la fecha de inicio");
+    }
+
     UUID idUsuario = SecurityUtils.getCurrentUserId();
-    System.out.println("ID usuario: "+idUsuario);
     Empleado empleado = empleadoRepository.findByIdUsuario(idUsuario)
             .orElseThrow(() -> new NotFoundException("No se encontró empleado con el user id del payload"));
+
+    List<HistorialConvocatoriaResponse> convocatorias = getHistorialConvocatorias(request.getFechaInicio().getYear());
+
+    // No pueden haber dos convocatorias con el mismo mes en el mismo año (a menos que haya sido rechazada)
+    boolean mesRepetido = convocatorias.stream()
+            .anyMatch(conv -> conv.getMes().equals(request.getMes())
+                    && conv.getEstado() != EstadoConvocatoria.RECHAZADO);
+
+    if (mesRepetido) {
+      throw new BadRequestException(String.format("Ya existe una convocatoria registrada para el mes de %s",
+              request.getMes()));
+    }
+
+    // No pueden haber dos periodos cruzados de convocatorias
+    boolean periodoCruzado = convocatorias.stream()
+            .anyMatch(convoc ->
+                    convoc.getEstado() != EstadoConvocatoria.RECHAZADO &&
+                            request.getFechaInicio().isBefore(convoc.getFechaFin()) &&
+                            request.getFechaFin().isAfter(convoc.getFechaInicio()));
+
+    if (periodoCruzado) {
+      throw new BadRequestException("Las fechas seleccionadas presentan un conflicto con otra convocatoria programada");
+    }
 
     Convocatoria convocatoria = convocatoriaRepository.save(ConvocatoriaMapper.buildConvocatoria(request, empleado));
     AuditEmpleadoResponse auditEmpleadoResponse = empleadoService.obtenerAuditoriaActual();
@@ -61,7 +90,9 @@ public class ConvocatoriaService {
 
   public List<HistorialConvocatoriaResponse> getHistorialConvocatorias(Integer year) {
     List<Convocatoria> convocatorias = convocatoriaRepository.findByYear(year);
-    if (convocatorias.isEmpty()) throw new NotFoundException("No se encontraron convocatorias para el año especificado");
+    if (convocatorias == null || convocatorias.isEmpty()) {
+      return Collections.emptyList();
+    }
 
     return convocatorias.stream()
             .map(ConvocatoriaMapper::mapHistorialConvocatoria)

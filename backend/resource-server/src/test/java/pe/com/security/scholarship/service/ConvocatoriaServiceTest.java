@@ -18,6 +18,7 @@ import pe.com.security.scholarship.entity.Convocatoria;
 import pe.com.security.scholarship.entity.Empleado;
 import pe.com.security.scholarship.entity.enums.EstadoConvocatoria;
 import pe.com.security.scholarship.entity.enums.Mes;
+import pe.com.security.scholarship.exception.BadRequestException;
 import pe.com.security.scholarship.exception.ConflictException;
 import pe.com.security.scholarship.exception.NotFoundException;
 import pe.com.security.scholarship.repository.ConvocatoriaRepository;
@@ -34,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -91,6 +93,7 @@ class ConvocatoriaServiceTest {
             securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
             
             when(empleadoRepository.findByIdUsuario(idUsuario)).thenReturn(Optional.of(empleado));
+            when(convocatoriaRepository.findByYear(anyInt())).thenReturn(Collections.emptyList());
             when(convocatoriaRepository.save(any(Convocatoria.class))).thenReturn(convocatoriaGuardada);
             when(empleadoService.obtenerAuditoriaActual()).thenReturn(auditResponse);
 
@@ -110,10 +113,25 @@ class ConvocatoriaServiceTest {
     }
 
     @Test
-    void lanzarExcepcionCuandoEmpleadoNoExisteAlCrear() {
+    void crearConvocatoria_DeberiaLanzarBadRequest_CuandoFechasInvalidas() {
+        // Arrange
+        RegisterConvocatoriaRequest request = new RegisterConvocatoriaRequest();
+        request.setFechaInicio(LocalDate.now().plusDays(10));
+        request.setFechaFin(LocalDate.now()); // Fecha fin anterior a inicio
+
+        // Act & Assert
+        assertThatThrownBy(() -> convocatoriaService.registerConvocatoria(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("La fecha de finalización debe ser posterior a la fecha de inicio");
+    }
+
+    @Test
+    void crearConvocatoria_DeberiaLanzarNotFound_CuandoEmpleadoNoExiste() {
         // Arrange
         UUID idUsuario = UUID.randomUUID();
         RegisterConvocatoriaRequest request = new RegisterConvocatoriaRequest();
+        request.setFechaInicio(LocalDate.now());
+        request.setFechaFin(LocalDate.now().plusDays(30));
 
         try (MockedStatic<SecurityUtils> securityUtilsMock = mockStatic(SecurityUtils.class)) {
             securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
@@ -124,9 +142,113 @@ class ConvocatoriaServiceTest {
             assertThatThrownBy(() -> convocatoriaService.registerConvocatoria(request))
                     .isInstanceOf(NotFoundException.class)
                     .hasMessage("No se encontró empleado con el user id del payload");
+        }
+    }
+
+    @Test
+    void crearConvocatoria_DeberiaLanzarBadRequest_CuandoMesRepetido() {
+        // Arrange
+        UUID idUsuario = UUID.randomUUID();
+        RegisterConvocatoriaRequest request = new RegisterConvocatoriaRequest();
+        request.setMes(Mes.ENERO);
+        request.setFechaInicio(LocalDate.now());
+        request.setFechaFin(LocalDate.now().plusDays(30));
+
+        Empleado empleado = new Empleado();
+        empleado.setIdUsuario(idUsuario);
+
+        Convocatoria convocatoriaExistente = Convocatoria.builder()
+                .mes(Mes.ENERO)
+                .estado(EstadoConvocatoria.PROGRAMADO)
+                .build();
+
+        try (MockedStatic<SecurityUtils> securityUtilsMock = mockStatic(SecurityUtils.class)) {
+            securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
             
-            verify(empleadoRepository, times(1)).findByIdUsuario(idUsuario);
-            verify(convocatoriaRepository, times(0)).save(any(Convocatoria.class));
+            when(empleadoRepository.findByIdUsuario(idUsuario)).thenReturn(Optional.of(empleado));
+            when(convocatoriaRepository.findByYear(anyInt())).thenReturn(List.of(convocatoriaExistente));
+
+            // Act & Assert
+            assertThatThrownBy(() -> convocatoriaService.registerConvocatoria(request))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasMessageContaining("Ya existe una convocatoria registrada para el mes de ENERO");
+        }
+    }
+
+    @Test
+    void crearConvocatoria_DeberiaPermitirRegistro_CuandoMesRepetidoPeroRechazado() {
+        // Arrange
+        UUID idUsuario = UUID.randomUUID();
+        RegisterConvocatoriaRequest request = new RegisterConvocatoriaRequest();
+        request.setMes(Mes.ENERO);
+        request.setFechaInicio(LocalDate.now());
+        request.setFechaFin(LocalDate.now().plusDays(30));
+        request.setCantidadVacantes(10);
+
+        Empleado empleado = new Empleado();
+        empleado.setIdUsuario(idUsuario);
+
+        AuditEmpleadoResponse auditResponse = AuditEmpleadoResponse.builder().build();
+
+        Convocatoria convocatoriaRechazada = Convocatoria.builder()
+                .mes(Mes.ENERO)
+                .estado(EstadoConvocatoria.RECHAZADO)
+                .fechaInicio(LocalDate.now().minusDays(60))
+                .fechaFin(LocalDate.now().minusDays(30))
+                .build();
+        
+        Convocatoria convocatoriaGuardada = Convocatoria.builder()
+                .mes(request.getMes())
+                .build();
+
+        try (MockedStatic<SecurityUtils> securityUtilsMock = mockStatic(SecurityUtils.class)) {
+            securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
+            
+            when(empleadoRepository.findByIdUsuario(idUsuario)).thenReturn(Optional.of(empleado));
+            when(convocatoriaRepository.findByYear(anyInt())).thenReturn(List.of(convocatoriaRechazada));
+            when(convocatoriaRepository.save(any(Convocatoria.class))).thenReturn(convocatoriaGuardada);
+            when(empleadoService.obtenerAuditoriaActual()).thenReturn(auditResponse);
+
+            // Act
+            RegisteredConvocatoriaResponse response = convocatoriaService.registerConvocatoria(request);
+
+            // Assert
+            assertThat(response).isNotNull();
+            verify(convocatoriaRepository, times(1)).save(any(Convocatoria.class));
+        }
+    }
+
+    @Test
+    void crearConvocatoria_DeberiaLanzarBadRequest_CuandoPeriodoCruzado() {
+        // Arrange
+        UUID idUsuario = UUID.randomUUID();
+        RegisterConvocatoriaRequest request = new RegisterConvocatoriaRequest();
+        request.setMes(Mes.FEBRERO);
+        request.setFechaInicio(LocalDate.now().plusDays(10));
+        request.setFechaFin(LocalDate.now().plusDays(20));
+
+        Empleado empleado = new Empleado();
+        empleado.setIdUsuario(idUsuario);
+
+        // Convocatoria existente que se cruza: empieza hoy y termina en 30 días
+        // El request empieza en 10 días y termina en 20 días (está dentro del periodo existente)
+        Convocatoria convocatoriaExistente = Convocatoria.builder()
+                .mes(Mes.ENERO)
+                .estado(EstadoConvocatoria.PROGRAMADO)
+                .fechaInicio(LocalDate.now())
+                .fechaFin(LocalDate.now().plusDays(30))
+                .build();
+
+        try (MockedStatic<SecurityUtils> securityUtilsMock = mockStatic(SecurityUtils.class)) {
+            securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
+            
+            when(empleadoRepository.findByIdUsuario(idUsuario)).thenReturn(Optional.of(empleado));
+            when(convocatoriaRepository.findByYear(anyInt())).thenReturn(List.of(convocatoriaExistente));
+
+            // Act & Assert
+            assertThatThrownBy(() -> convocatoriaService.registerConvocatoria(request))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasMessage("Las fechas seleccionadas presentan un conflicto con otra convocatoria programada");
         }
     }
 
@@ -225,14 +347,30 @@ class ConvocatoriaServiceTest {
     }
 
     @Test
-    void getHistorialConvocatorias_DeberiaLanzarNotFoundException_CuandoListaVacia() {
+    void getHistorialConvocatorias_DeberiaRetornarListaVacia_CuandoNoExistenDatos() {
         // Arrange
         Integer year = 2023;
         when(convocatoriaRepository.findByYear(year)).thenReturn(Collections.emptyList());
 
-        // Act & Assert
-        assertThatThrownBy(() -> convocatoriaService.getHistorialConvocatorias(year))
-                .isInstanceOf(NotFoundException.class)
-                .hasMessage("No se encontraron convocatorias para el año especificado");
+        // Act
+        List<HistorialConvocatoriaResponse> response = convocatoriaService.getHistorialConvocatorias(year);
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response).isEmpty();
+    }
+    
+    @Test
+    void getHistorialConvocatorias_DeberiaRetornarListaVacia_CuandoRepositorioRetornaNull() {
+        // Arrange
+        Integer year = 2023;
+        when(convocatoriaRepository.findByYear(year)).thenReturn(null);
+
+        // Act
+        List<HistorialConvocatoriaResponse> response = convocatoriaService.getHistorialConvocatorias(year);
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response).isEmpty();
     }
 }
