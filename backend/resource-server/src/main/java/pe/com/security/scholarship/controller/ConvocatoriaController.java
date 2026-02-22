@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import pe.com.security.scholarship.dto.request.RegisterConvocatoriaRequest;
 import pe.com.security.scholarship.dto.response.ConvocatoriaAbiertaResponse;
+import pe.com.security.scholarship.dto.response.DetalleConvocatoriaResponse;
 import pe.com.security.scholarship.dto.response.HistorialConvocatoriaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredConvocatoriaResponse;
 import pe.com.security.scholarship.service.ConvocatoriaService;
@@ -49,5 +50,14 @@ public class ConvocatoriaController {
   ) {
     List<HistorialConvocatoriaResponse> responses = convocatoriaService.getHistorialConvocatorias(year);
     return ResponseEntity.ok(new ApiResponse<>("Consulta exitosa", "200", responses));
+  }
+
+  @GetMapping("/{id}")
+  @PreAuthorize("hasRole('SOCIAL_OUTREACH_SECRETARY') or hasRole('SOCIAL_OUTREACH_MANAGER')")
+  public ResponseEntity<ApiResponse<DetalleConvocatoriaResponse>> getDetallesConvocatoria(
+          @PathVariable Integer id
+  ) {
+    DetalleConvocatoriaResponse response = convocatoriaService.getDetalleConvocatoria(id);
+    return ResponseEntity.ok(new ApiResponse<>("Consulta exitosa", "200", response));
   }
 }

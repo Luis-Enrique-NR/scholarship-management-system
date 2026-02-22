@@ -3,24 +3,18 @@ package pe.com.security.scholarship.controller;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import pe.com.security.scholarship.dto.request.CreateConvocatoriaRequest;
 import pe.com.security.scholarship.dto.request.CreatePostulacionRequest;
-import pe.com.security.scholarship.entity.Convocatoria;
-import pe.com.security.scholarship.entity.Matricula;
-import pe.com.security.scholarship.entity.Postulacion;
+import pe.com.security.scholarship.domain.entity.Matricula;
+import pe.com.security.scholarship.domain.entity.Postulacion;
 import pe.com.security.scholarship.util.ApiResponse;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/usuario")
@@ -56,6 +50,7 @@ public class UsuarioController {
 
   // Postular convocatoria: Estudiante
 
+  /*
   @PostMapping("/postulaciones")
   @PreAuthorize("hasRole('STUDENT')")
   public ResponseEntity<ApiResponse<Postulacion>> postularConvocatoria(
@@ -97,4 +92,6 @@ public class UsuarioController {
 
     return ResponseEntity.ok(new ApiResponse<>("Actualización de notas exitosa", "200", matricula));
   }
+
+   */
 }

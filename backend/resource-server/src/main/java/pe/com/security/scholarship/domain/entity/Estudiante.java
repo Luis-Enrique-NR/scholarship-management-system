@@ -1,11 +1,16 @@
-package pe.com.security.scholarship.entity;
+package pe.com.security.scholarship.domain.entity;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,18 +22,18 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
-import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "empleados")
+@Table(name = "estudiantes")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 @EntityListeners(AuditingEntityListener.class)
-public class Empleado {
+public class Estudiante {
 
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
@@ -37,11 +42,18 @@ public class Empleado {
   @Column(nullable = false, unique = true)
   private UUID idUsuario;
 
-  @Column(nullable = false, unique = true, length = 20)
-  private String codigoEmpleado;
+  @Column(length = 9, nullable = false, unique = true)
+  private String codigoEstudiante;
 
-  @Column(nullable = false)
-  private LocalDate fechaIngreso;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "id_carrera", nullable = false)
+  private Carrera carrera;
+
+  @Column(length = 9)
+  private String celular;
+
+  @Column(length = 100)
+  private String direccionDomicilio;
 
   @CreatedDate
   @Column(nullable = false, updatable = false)
@@ -50,5 +62,12 @@ public class Empleado {
   @UpdateTimestamp
   private Instant updatedAt;
 
-  private UUID createdBy; // Empleado que lo registró
+  @OneToMany(mappedBy = "estudiante", cascade = CascadeType.ALL)
+  private List<PromedioPonderado> promediosPonderados;
+
+  @OneToMany(mappedBy = "estudiante", cascade = CascadeType.ALL)
+  private List<EvaluacionSocioeconomica> evaluacionesSocioeconomicas;
+
+  @OneToMany(mappedBy = "estudiante", cascade = CascadeType.ALL)
+  private List<Postulacion> postulaciones;
 }

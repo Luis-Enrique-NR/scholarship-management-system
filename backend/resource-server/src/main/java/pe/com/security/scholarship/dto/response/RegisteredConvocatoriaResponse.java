@@ -3,8 +3,8 @@ package pe.com.security.scholarship.dto.response;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 import lombok.Data;
-import pe.com.security.scholarship.entity.enums.EstadoConvocatoria;
-import pe.com.security.scholarship.entity.enums.Mes;
+import pe.com.security.scholarship.domain.enums.EstadoConvocatoria;
+import pe.com.security.scholarship.domain.enums.Mes;
 
 import java.time.Instant;
 import java.time.LocalDate;

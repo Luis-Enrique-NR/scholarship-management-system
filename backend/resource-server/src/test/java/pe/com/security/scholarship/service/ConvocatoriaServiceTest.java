@@ -9,17 +9,21 @@ import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.transaction.TransactionSystemException;
+import pe.com.security.scholarship.domain.entity.Convocatoria;
+import pe.com.security.scholarship.domain.entity.Empleado;
+import pe.com.security.scholarship.domain.enums.EstadoConvocatoria;
+import pe.com.security.scholarship.domain.enums.Mes;
+import pe.com.security.scholarship.dto.projection.RankingProjection;
+import pe.com.security.scholarship.dto.projection.TasasConvocatoriaProjection;
 import pe.com.security.scholarship.dto.request.RegisterConvocatoriaRequest;
 import pe.com.security.scholarship.dto.response.AuditEmpleadoResponse;
 import pe.com.security.scholarship.dto.response.ConvocatoriaAbiertaResponse;
+import pe.com.security.scholarship.dto.response.DetalleConvocatoriaResponse;
 import pe.com.security.scholarship.dto.response.HistorialConvocatoriaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredConvocatoriaResponse;
-import pe.com.security.scholarship.entity.Convocatoria;
-import pe.com.security.scholarship.entity.Empleado;
-import pe.com.security.scholarship.entity.enums.EstadoConvocatoria;
-import pe.com.security.scholarship.entity.enums.Mes;
 import pe.com.security.scholarship.exception.BadRequestException;
 import pe.com.security.scholarship.exception.ConflictException;
+import pe.com.security.scholarship.exception.InternalServerErrorException;
 import pe.com.security.scholarship.exception.NotFoundException;
 import pe.com.security.scholarship.repository.ConvocatoriaRepository;
 import pe.com.security.scholarship.repository.EmpleadoRepository;
@@ -36,6 +40,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -372,5 +377,110 @@ class ConvocatoriaServiceTest {
         // Assert
         assertThat(response).isNotNull();
         assertThat(response).isEmpty();
+    }
+
+    @Test
+    void getDetalleConvocatoria_DeberiaRetornarDetalleCompleto_CuandoTodoEsValido() {
+        // Arrange
+        Integer id = 1;
+        Convocatoria convocatoria = Convocatoria.builder()
+                .id(id)
+                .mes(Mes.ENERO)
+                .fechaInicio(LocalDate.now())
+                .fechaFin(LocalDate.now().plusDays(30))
+                .estado(EstadoConvocatoria.APERTURADO)
+                .cantidadVacantes(100)
+                .build();
+
+        AuditEmpleadoResponse auditResponse = AuditEmpleadoResponse.builder()
+                .codigo("EMP-001")
+                .nombreCompleto("Admin")
+                .build();
+
+        TasasConvocatoriaProjection tasas = mock(TasasConvocatoriaProjection.class);
+        when(tasas.getTasaAceptacion()).thenReturn(0.75);
+        when(tasas.getTasaMatriculados()).thenReturn(60.0);
+
+        RankingProjection ranking1 = mock(RankingProjection.class);
+
+        when(convocatoriaRepository.findById(id)).thenReturn(Optional.of(convocatoria));
+        when(empleadoService.obtenerAuditoriaActual()).thenReturn(auditResponse);
+        when(convocatoriaRepository.getCantidadPostulantes(id)).thenReturn(100);
+        when(convocatoriaRepository.getTasasGenerales(id)).thenReturn(tasas);
+        when(convocatoriaRepository.getRankingSocioeconomico(id)).thenReturn(List.of(ranking1));
+        when(convocatoriaRepository.getRankingCiclo(id)).thenReturn(List.of(ranking1));
+        when(convocatoriaRepository.getRankingCarrera(id)).thenReturn(List.of(ranking1));
+
+        // Act
+        DetalleConvocatoriaResponse response = convocatoriaService.getDetalleConvocatoria(id);
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getDatosGeneralesConvocatoria().getMes().equals(Mes.ENERO));
+        assertThat(response.getCantidadPostulantes()).isEqualTo(100);
+        assertThat(response.getTasaAceptacion()).isEqualTo("75%");
+        assertThat(response.getRankingSocioeconomico()).hasSize(1);
+    }
+
+    @Test
+    void getDetalleConvocatoria_DeberiaLanzarNotFoundException_CuandoConvocatoriaNoExiste() {
+        // Arrange
+        Integer id = 1;
+        when(convocatoriaRepository.findById(id)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThatThrownBy(() -> convocatoriaService.getDetalleConvocatoria(id))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessage("No se encontró convocatoria con el id especificado");
+
+        verify(convocatoriaRepository, times(0)).getTasasGenerales(anyInt());
+    }
+
+    @Test
+    void getDetalleConvocatoria_DeberiaLanzarInternalServerError_CuandoFallaCalculoTasas() {
+        // Arrange
+        Integer id = 1;
+        Convocatoria convocatoria = Convocatoria.builder().id(id).build();
+
+        when(convocatoriaRepository.findById(id)).thenReturn(Optional.of(convocatoria));
+        when(empleadoService.obtenerAuditoriaActual()).thenReturn(AuditEmpleadoResponse.builder().build());
+        when(convocatoriaRepository.getCantidadPostulantes(id)).thenReturn(100);
+        when(convocatoriaRepository.getTasasGenerales(id)).thenReturn(null);
+
+        // Act & Assert
+        assertThatThrownBy(() -> convocatoriaService.getDetalleConvocatoria(id))
+                .isInstanceOf(InternalServerErrorException.class)
+                .hasMessage("No se pudieron calcular las tasas de la convocatoria");
+    }
+
+    @Test
+    void getDetalleConvocatoria_DeberiaManejarListasVaciasEnRankings() {
+        // Arrange
+        Integer id = 1;
+        Convocatoria convocatoria = Convocatoria.builder()
+                .id(id)
+                .mes(Mes.ENERO)
+                .build();
+
+        TasasConvocatoriaProjection tasas = mock(TasasConvocatoriaProjection.class);
+        when(tasas.getTasaAceptacion()).thenReturn(0.0);
+        when(tasas.getTasaMatriculados()).thenReturn(0.0);
+
+        when(convocatoriaRepository.findById(id)).thenReturn(Optional.of(convocatoria));
+        when(empleadoService.obtenerAuditoriaActual()).thenReturn(AuditEmpleadoResponse.builder().build());
+        when(convocatoriaRepository.getCantidadPostulantes(id)).thenReturn(0);
+        when(convocatoriaRepository.getTasasGenerales(id)).thenReturn(tasas);
+        when(convocatoriaRepository.getRankingSocioeconomico(id)).thenReturn(Collections.emptyList());
+        when(convocatoriaRepository.getRankingCiclo(id)).thenReturn(Collections.emptyList());
+        when(convocatoriaRepository.getRankingCarrera(id)).thenReturn(Collections.emptyList());
+
+        // Act
+        DetalleConvocatoriaResponse response = convocatoriaService.getDetalleConvocatoria(id);
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getRankingSocioeconomico()).isEmpty();
+        assertThat(response.getRankingCiclos()).isEmpty();
+        assertThat(response.getRankingCarreras()).isEmpty();
     }
 }

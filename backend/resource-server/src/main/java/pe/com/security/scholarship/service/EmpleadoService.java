@@ -5,7 +5,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import pe.com.security.scholarship.dto.response.AuditEmpleadoResponse;
-import pe.com.security.scholarship.entity.Empleado;
+import pe.com.security.scholarship.domain.entity.Empleado;
 import pe.com.security.scholarship.exception.NotFoundException;
 import pe.com.security.scholarship.repository.EmpleadoRepository;
 

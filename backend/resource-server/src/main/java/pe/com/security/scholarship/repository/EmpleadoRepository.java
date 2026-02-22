@@ -4,7 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import pe.com.security.scholarship.entity.Empleado;
+import pe.com.security.scholarship.domain.entity.Empleado;
 
 import java.util.Optional;
 import java.util.UUID;
