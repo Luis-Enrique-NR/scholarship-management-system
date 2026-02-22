@@ -1,10 +1,8 @@
-package pe.com.security.scholarship.entity;
+package pe.com.security.scholarship.domain.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -20,51 +18,43 @@ import lombok.Setter;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-import pe.com.security.scholarship.entity.enums.EstadoConvocatoria;
-import pe.com.security.scholarship.entity.enums.Mes;
 
 import java.time.Instant;
-import java.time.LocalDate;
 
 @Entity
-@Table(name = "convocatorias")
+@Table(name = "matriculas")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 @EntityListeners(AuditingEntityListener.class)
-public class Convocatoria {
+public class Matricula {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Integer id;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private Mes mes;
-
-  @Column(nullable = false)
-  private LocalDate fechaInicio;
-
-  @Column(nullable = false)
-  private LocalDate fechaFin;
-
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private EstadoConvocatoria estado;
-
-  @Column(nullable = false)
-  private Integer cantidadVacantes;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "id_postulacion", nullable = false)
+  private Postulacion postulacion;
 
   @CreatedDate
   @Column(nullable = false, updatable = false)
-  private Instant createdAt;
+  private Instant fechaSolicitud;
+
+  private Instant fechaMatricula;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "id_empleado")
+  private Empleado empleado;
+
+  @Column(length = 10, nullable = false)
+  private String estado;
+
+  @Column(columnDefinition = "NUMERIC(4,2)")
+  private Double nota;
 
   @UpdateTimestamp
   private Instant updatedAt;
-
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "created_by", nullable = false)
-  private Empleado createdBy;
 }

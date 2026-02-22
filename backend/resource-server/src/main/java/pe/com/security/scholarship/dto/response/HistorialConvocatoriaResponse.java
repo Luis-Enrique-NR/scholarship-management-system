@@ -11,18 +11,14 @@ import java.time.LocalDate;
 
 @Data
 @Builder
-public class RegisteredConvocatoriaResponse {
+public class HistorialConvocatoriaResponse {
+  private Integer id;
   private Mes mes;
   private LocalDate fechaInicio;
   private LocalDate fechaFin;
   private EstadoConvocatoria estado;
-  private Integer cantidadVacantes;
-
-  @JsonFormat(
-          shape = JsonFormat.Shape.STRING,
-          pattern = "yyyy-MM-dd HH:mm:ss",
-          timezone = "America/Lima"
-  )
+  @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss", timezone = "America/Lima")
   private Instant createdAt;
-  private AuditEmpleadoResponse createdBy;
+  @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss", timezone = "America/Lima")
+  private Instant updatedAt;
 }

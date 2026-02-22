@@ -5,7 +5,7 @@ import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Data;
-import pe.com.security.scholarship.entity.enums.Mes;
+import pe.com.security.scholarship.domain.enums.Mes;
 
 import java.time.LocalDate;
 
