@@ -3,6 +3,8 @@ package pe.com.security.scholarship.domain.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -18,6 +20,7 @@ import lombok.Setter;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import pe.com.security.scholarship.domain.enums.EstadoMatricula;
 
 import java.time.Instant;
 
@@ -49,12 +52,17 @@ public class Matricula {
   @JoinColumn(name = "id_empleado")
   private Empleado empleado;
 
-  @Column(length = 10, nullable = false)
-  private String estado;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private EstadoMatricula estado;
 
   @Column(columnDefinition = "NUMERIC(4,2)")
   private Double nota;
 
   @UpdateTimestamp
   private Instant updatedAt;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "id_seccion", nullable = false)
+  private Seccion seccion;
 }

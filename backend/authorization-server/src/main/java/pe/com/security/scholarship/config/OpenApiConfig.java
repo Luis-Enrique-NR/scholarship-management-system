@@ -20,7 +20,7 @@ public class OpenApiConfig {
   public OpenAPI customOpenAPI() {
     return new OpenAPI()
             .info(new Info()
-                    .title("Scholarship Identity Server")
+                    .title("Scholarship Auth Server API")
                     .description("Servidor de Identidad - Obtén aquí tu token para el Resource Server")
                     .version("1.0.0"))
             // El SecurityRequirement activa el candado globalmente

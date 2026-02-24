@@ -55,6 +55,7 @@ public class AuthenticationService {
   public void updatePassword(UpdatePasswordRequest request) {
     // 1. Obtener el Principal actual de forma segura
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    assert auth != null;
     String correo = auth.getName();
 
     Usuario usuario = usuarioRepository.findByCorreo(correo)

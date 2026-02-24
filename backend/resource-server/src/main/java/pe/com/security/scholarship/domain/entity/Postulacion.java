@@ -9,6 +9,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
@@ -22,6 +24,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "postulaciones")
@@ -56,4 +59,12 @@ public class Postulacion {
 
   @OneToMany(mappedBy = "postulacion", cascade = CascadeType.ALL)
   private List<Matricula> matriculas;
+
+  @ManyToMany(fetch = FetchType.LAZY)
+  @JoinTable(
+          name = "cursos_postulacion",
+          joinColumns = @JoinColumn(name = "id_postulacion"),
+          inverseJoinColumns = @JoinColumn(name = "id_curso")
+  )
+  private Set<Curso> cursos;
 }

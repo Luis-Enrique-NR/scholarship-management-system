@@ -3,6 +3,8 @@ package pe.com.security.scholarship.domain.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -18,6 +20,7 @@ import lombok.Setter;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import pe.com.security.scholarship.domain.enums.NivelSocioeconomico;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -44,8 +47,8 @@ public class EvaluacionSocioeconomica {
   private LocalDate fechaEvaluacion;
   private LocalDate fechaExpiracion;
 
-  @Column(length = 10)
-  private String nivelSocioeconomico;
+  @Enumerated(EnumType.STRING)
+  private NivelSocioeconomico nivelSocioeconomico;
 
   @CreatedDate
   @Column(nullable = false, updatable = false)
