@@ -11,8 +11,12 @@ import pe.com.security.scholarship.domain.entity.Convocatoria;
 import pe.com.security.scholarship.domain.entity.Curso;
 import pe.com.security.scholarship.domain.entity.Estudiante;
 import pe.com.security.scholarship.domain.entity.Postulacion;
+import pe.com.security.scholarship.domain.enums.EstadoConvocatoria;
+import pe.com.security.scholarship.domain.enums.Mes;
 import pe.com.security.scholarship.domain.enums.ModalidadCurso;
 import pe.com.security.scholarship.dto.request.RegisterPostulacionRequest;
+import pe.com.security.scholarship.dto.response.ConsultaPostulacionResponse;
+import pe.com.security.scholarship.dto.response.HistorialPostulacionResponse;
 import pe.com.security.scholarship.dto.response.RegisteredPostulacionResponse;
 import pe.com.security.scholarship.exception.BadRequestException;
 import pe.com.security.scholarship.exception.NotFoundException;
@@ -32,8 +36,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -348,6 +350,120 @@ class PostulacionServiceTest {
             assertThatThrownBy(() -> postulacionService.registerPostulacion(request))
                     .isInstanceOf(NotFoundException.class)
                     .hasMessage("Uno o más cursos no fueron encontrados");
+        }
+    }
+
+    @Test
+    void getDetallePostulacion_ShouldReturnResponse_WhenPostulacionExists() {
+        // Arrange
+        Integer idPostulacion = 1;
+        Postulacion postulacion = new Postulacion();
+        postulacion.setId(idPostulacion);
+        
+        Convocatoria convocatoria = new Convocatoria();
+        convocatoria.setMes(Mes.ENERO);
+        convocatoria.setEstado(EstadoConvocatoria.APERTURADO);
+        postulacion.setConvocatoria(convocatoria);
+        
+        Estudiante estudiante = new Estudiante();
+        postulacion.setEstudiante(estudiante);
+        
+        postulacion.setCursos(Set.of());
+
+        when(postulacionRepository.findById(idPostulacion)).thenReturn(Optional.of(postulacion));
+
+        // Act
+        ConsultaPostulacionResponse response = postulacionService.getDetallePostulacion(idPostulacion);
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getId()).isEqualTo(idPostulacion);
+    }
+
+    @Test
+    void getDetallePostulacion_ShouldThrowNotFound_WhenPostulacionDoesNotExist() {
+        // Arrange
+        Integer idPostulacion = 1;
+        when(postulacionRepository.findById(idPostulacion)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThatThrownBy(() -> postulacionService.getDetallePostulacion(idPostulacion))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessage("No se encontró la postulación");
+    }
+
+    @Test
+    void getHistorialPostulacion_ShouldReturnList_WhenDataExists() {
+        // Arrange
+        UUID idUsuario = UUID.randomUUID();
+        UUID idEstudiante = UUID.randomUUID();
+        Integer year = 2023;
+
+        Estudiante estudiante = new Estudiante();
+        estudiante.setId(idEstudiante);
+
+        Postulacion postulacion = new Postulacion();
+        postulacion.setId(1);
+        Convocatoria convocatoria = new Convocatoria();
+        convocatoria.setMes(Mes.ENERO);
+        postulacion.setConvocatoria(convocatoria);
+        postulacion.setCursos(Set.of());
+
+        try (MockedStatic<SecurityUtils> securityUtilsMock = mockStatic(SecurityUtils.class)) {
+            securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
+
+            when(estudianteRepository.findByIdUsuario(idUsuario)).thenReturn(Optional.of(estudiante));
+            when(postulacionRepository.findByYear(idEstudiante, year)).thenReturn(List.of(postulacion));
+
+            // Act
+            List<HistorialPostulacionResponse> response = postulacionService.getHistorialPostulacion(year);
+
+            // Assert
+            assertThat(response).isNotEmpty();
+            assertThat(response).hasSize(1);
+        }
+    }
+
+    @Test
+    void getHistorialPostulacion_ShouldReturnEmptyList_WhenNoDataExists() {
+        // Arrange
+        UUID idUsuario = UUID.randomUUID();
+        UUID idEstudiante = UUID.randomUUID();
+        Integer year = 2023;
+
+        Estudiante estudiante = new Estudiante();
+        estudiante.setId(idEstudiante);
+
+        try (MockedStatic<SecurityUtils> securityUtilsMock = mockStatic(SecurityUtils.class)) {
+            securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
+
+            when(estudianteRepository.findByIdUsuario(idUsuario)).thenReturn(Optional.of(estudiante));
+            when(postulacionRepository.findByYear(idEstudiante, year)).thenReturn(Collections.emptyList());
+
+            // Act
+            List<HistorialPostulacionResponse> response = postulacionService.getHistorialPostulacion(year);
+
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(response).isEmpty();
+        }
+    }
+
+    @Test
+    void getHistorialPostulacion_ShouldThrowNotFound_WhenEstudianteDoesNotExist() {
+        // Arrange
+        UUID idUsuario = UUID.randomUUID();
+        Integer year = 2023;
+
+        try (MockedStatic<SecurityUtils> securityUtilsMock = mockStatic(SecurityUtils.class)) {
+            securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
+
+            when(estudianteRepository.findByIdUsuario(idUsuario)).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(() -> postulacionService.getHistorialPostulacion(year))
+                    .isInstanceOf(NotFoundException.class)
+                    .hasMessage("No se encontró estudiante asociado al id del payload");
         }
     }
 }

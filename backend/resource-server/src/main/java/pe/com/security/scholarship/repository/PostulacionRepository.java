@@ -6,6 +6,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import pe.com.security.scholarship.domain.entity.Postulacion;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -44,4 +45,7 @@ public interface PostulacionRepository extends JpaRepository<Postulacion, Intege
           limit 1
     """, nativeQuery = true)
   Optional<Postulacion> findLastPostulacion(@Param("idEstudiante") UUID idEstudiante);
+
+  @Query("SELECT p FROM Postulacion p WHERE p.estudiante.id = :idEstudiante AND YEAR(p.fechaPostulacion) = :year")
+  List<Postulacion> findByYear(@Param("idEstudiante") UUID idEstudiante, @Param("year") Integer year);
 }

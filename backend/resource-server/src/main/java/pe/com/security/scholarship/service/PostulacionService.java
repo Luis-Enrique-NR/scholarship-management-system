@@ -8,7 +8,9 @@ import pe.com.security.scholarship.domain.entity.Curso;
 import pe.com.security.scholarship.domain.entity.Estudiante;
 import pe.com.security.scholarship.domain.entity.Postulacion;
 import pe.com.security.scholarship.dto.request.RegisterPostulacionRequest;
+import pe.com.security.scholarship.dto.response.ConsultaPostulacionResponse;
 import pe.com.security.scholarship.dto.response.CursoPostulacionResponse;
+import pe.com.security.scholarship.dto.response.HistorialPostulacionResponse;
 import pe.com.security.scholarship.dto.response.RegisteredPostulacionResponse;
 import pe.com.security.scholarship.exception.BadRequestException;
 import pe.com.security.scholarship.exception.NotFoundException;
@@ -21,6 +23,7 @@ import pe.com.security.scholarship.repository.MatriculaRepository;
 import pe.com.security.scholarship.repository.PostulacionRepository;
 import pe.com.security.scholarship.util.SecurityUtils;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -73,6 +76,28 @@ public class PostulacionService {
             .collect(Collectors.toSet());
 
     return PostulacionMapper.mapRegisteredPostulacion(postulacion, cursoSet);
+  }
+
+  public ConsultaPostulacionResponse getDetallePostulacion(Integer idPostulacion) {
+    Postulacion postulacion = postulacionRepository.findById(idPostulacion)
+            .orElseThrow(() -> new NotFoundException("No se encontró la postulación"));
+
+    return PostulacionMapper.mapConsultaPostulacion(postulacion);
+  }
+
+  public List<HistorialPostulacionResponse> getHistorialPostulacion(Integer year) {
+    UUID idUsuario = SecurityUtils.getCurrentUserId();
+    Estudiante estudiante = estudianteRepository.findByIdUsuario(idUsuario)
+            .orElseThrow(() -> new NotFoundException("No se encontró estudiante asociado al id del payload"));
+
+    List<Postulacion> postulaciones = postulacionRepository.findByYear(estudiante.getId(), year);
+    if (postulaciones == null || postulaciones.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    return postulaciones.stream()
+            .map(PostulacionMapper::mapHistorialPostulacion)
+            .toList();
   }
 
   // VERIFICAR SI TIENE BECA ACTIVA

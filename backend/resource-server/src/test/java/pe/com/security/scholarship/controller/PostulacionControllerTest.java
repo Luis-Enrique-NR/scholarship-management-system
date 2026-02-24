@@ -10,6 +10,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import pe.com.security.scholarship.config.ResourceServerTest;
 import pe.com.security.scholarship.dto.request.RegisterPostulacionRequest;
+import pe.com.security.scholarship.dto.response.ConsultaPostulacionResponse;
+import pe.com.security.scholarship.dto.response.HistorialPostulacionResponse;
 import pe.com.security.scholarship.dto.response.RegisteredPostulacionResponse;
 import pe.com.security.scholarship.service.PostulacionService;
 
@@ -21,6 +23,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -117,5 +120,77 @@ class PostulacionControllerTest {
                 .andExpect(status().isBadRequest());
 
         verify(postulacionService, times(0)).registerPostulacion(any(RegisterPostulacionRequest.class));
+    }
+
+    @Test
+    void getDetallePostulacion_ShouldReturnOk_WhenAuthorized() throws Exception {
+        // Arrange
+        Integer idPostulacion = 1;
+        ConsultaPostulacionResponse response = ConsultaPostulacionResponse.builder()
+                .id(idPostulacion)
+                .build();
+
+        when(postulacionService.getDetallePostulacion(idPostulacion)).thenReturn(response);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/postulaciones/{idPostulacion}", idPostulacion)
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_STUDENT")))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Consulta exitosa"))
+                .andExpect(jsonPath("$.data.id").value(idPostulacion));
+
+        verify(postulacionService, times(1)).getDetallePostulacion(idPostulacion);
+    }
+
+    @Test
+    void getHistorialPostulacion_ShouldReturnOk_WhenAuthorized() throws Exception {
+        // Arrange
+        Integer year = 2023;
+        HistorialPostulacionResponse historial = HistorialPostulacionResponse.builder()
+                .id(1)
+                .build();
+        List<HistorialPostulacionResponse> response = List.of(historial);
+
+        when(postulacionService.getHistorialPostulacion(year)).thenReturn(response);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/postulaciones/historial")
+                        .param("year", year.toString())
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_STUDENT")))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Consulta exitosa"))
+                .andExpect(jsonPath("$.data[0].id").value(1));
+
+        verify(postulacionService, times(1)).getHistorialPostulacion(year);
+    }
+
+    @Test
+    void getDetallePostulacion_ShouldReturnForbidden_WhenRoleIsInvalid() throws Exception {
+        // Arrange
+        Integer idPostulacion = 1;
+
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/postulaciones/{idPostulacion}", idPostulacion)
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_SOCIAL_OUTREACH_MANAGER")))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden());
+
+        verify(postulacionService, times(0)).getDetallePostulacion(idPostulacion);
+    }
+
+    @Test
+    void getHistorialPostulacion_ShouldReturnUnauthorized_WhenNotAuthenticated() throws Exception {
+        // Arrange
+        Integer year = 2023;
+
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/postulaciones/historial")
+                        .param("year", year.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnauthorized());
+
+        verify(postulacionService, times(0)).getHistorialPostulacion(year);
     }
 }
