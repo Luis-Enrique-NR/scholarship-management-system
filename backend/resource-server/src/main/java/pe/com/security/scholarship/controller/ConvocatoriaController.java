@@ -1,5 +1,7 @@
 package pe.com.security.scholarship.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -24,12 +26,14 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/convocatorias")
 @RequiredArgsConstructor
+@Tag(name = "Convocatorias", description = "Endpoints para el registro, consulta y gestión de convocatorias")
 public class ConvocatoriaController {
 
   private final ConvocatoriaService convocatoriaService;
 
   @PostMapping
   @PreAuthorize("hasRole('SOCIAL_OUTREACH_SECRETARY') or hasRole('SOCIAL_OUTREACH_MANAGER')")
+  @Operation(summary = "Registro de convocatoria", description = "Programar el inicio y fin de una convocatoria")
   public ResponseEntity<ApiResponse<RegisteredConvocatoriaResponse>> registerConvocatoria(
           @Valid @RequestBody RegisterConvocatoriaRequest request
   ) {
@@ -38,6 +42,7 @@ public class ConvocatoriaController {
   }
 
   @GetMapping("/activa")
+  @Operation(summary = "Consultar convocatoria activa", description = "Consultar la convocatoria aperturada")
   public ResponseEntity<ApiResponse<ConvocatoriaAbiertaResponse>> getConvocatoriaAbierta() {
     ConvocatoriaAbiertaResponse response = convocatoriaService.getConvocatoriaAbierta();
     return ResponseEntity.ok(new ApiResponse<>("Consulta exitosa", "200", response));
@@ -45,6 +50,7 @@ public class ConvocatoriaController {
 
   @GetMapping("/historial")
   @PreAuthorize("hasRole('SOCIAL_OUTREACH_SECRETARY') or hasRole('SOCIAL_OUTREACH_MANAGER')")
+  @Operation(summary = "Consultar historial de convocatorias", description = "Obtener una lista de convocatorias pasadas por año")
   public ResponseEntity<ApiResponse<List<HistorialConvocatoriaResponse>>> getHistorialConvocatorias(
           @RequestParam Integer year
   ) {
@@ -54,6 +60,7 @@ public class ConvocatoriaController {
 
   @GetMapping("/{id}")
   @PreAuthorize("hasRole('SOCIAL_OUTREACH_SECRETARY') or hasRole('SOCIAL_OUTREACH_MANAGER')")
+  @Operation(summary = "Consultar detalles de convocatoria", description = "Obtener información detallada de una convocatoria para asegurar la trazabilidad")
   public ResponseEntity<ApiResponse<DetalleConvocatoriaResponse>> getDetallesConvocatoria(
           @PathVariable Integer id
   ) {

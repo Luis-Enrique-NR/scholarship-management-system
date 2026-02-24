@@ -1,20 +1,8 @@
 package pe.com.security.scholarship.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import pe.com.security.scholarship.dto.request.CreatePostulacionRequest;
-import pe.com.security.scholarship.domain.entity.Matricula;
-import pe.com.security.scholarship.domain.entity.Postulacion;
-import pe.com.security.scholarship.util.ApiResponse;
-
-import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/usuario")

@@ -12,6 +12,7 @@ import java.time.LocalDate;
 @Data
 @Builder
 public class RegisteredConvocatoriaResponse {
+  private Integer id;
   private Mes mes;
   private LocalDate fechaInicio;
   private LocalDate fechaFin;

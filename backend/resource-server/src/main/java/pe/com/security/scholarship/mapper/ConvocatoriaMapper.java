@@ -30,6 +30,7 @@ public class ConvocatoriaMapper {
   public static RegisteredConvocatoriaResponse mapRegisteredConvocatoria(Convocatoria convocatoria,
                                                                          AuditEmpleadoResponse auditEmpleadoResponse) {
     return RegisteredConvocatoriaResponse.builder()
+            .id(convocatoria.getId())
             .mes(convocatoria.getMes())
             .fechaInicio(convocatoria.getFechaInicio())
             .fechaFin(convocatoria.getFechaFin())
