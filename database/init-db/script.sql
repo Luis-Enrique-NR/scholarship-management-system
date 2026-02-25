@@ -155,16 +155,27 @@ create table evaluaciones_socioeconomicas (
 	constraint fk_evaluacion_socio_empleado foreign key (created_by) REFERENCES empleados(id)
 );
 
+create table periodos_academicos (
+	id SERIAL primary key,
+	periodo VARCHAR(4) not null unique,
+	fecha_inicio date not null,
+	fecha_fin date not null
+);
+
 create table promedios_ponderados (
 	id SERIAL primary key,
 	id_estudiante UUID not null,
 	ciclo_relativo INT not null,
 	promedio_ponderado NUMERIC(5,3) not null,
+	id_periodo INT not null,
 	
 	created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ,
+    id_empleado UUID not null,
     
-    constraint fk_promedio_estudiante foreign key (id_estudiante) REFERENCES estudiantes(id)
+    constraint fk_promedio_estudiante foreign key (id_estudiante) REFERENCES estudiantes(id),
+    CONSTRAINT fk_promedio_periodo FOREIGN KEY (id_periodo) REFERENCES periodos_academicos(id),
+    CONSTRAINT fk_promedio_empleado foreign key (id_empleado) REFERENCES empleados(id)
 );
 
 create table postulaciones (
@@ -196,7 +207,7 @@ create table matriculas (
 	fecha_solicitud timestamptz not null DEFAULT CURRENT_TIMESTAMP,
 	fecha_matricula timestamptz,
 	id_empleado uuid,
-	estado VARCHAR(10) not null,
+	estado VARCHAR(15) not null,
 	nota numeric(4,2),
 	updated_at TIMESTAMPTZ,
 	
