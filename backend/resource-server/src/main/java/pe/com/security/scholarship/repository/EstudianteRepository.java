@@ -12,4 +12,7 @@ public interface EstudianteRepository extends JpaRepository<Estudiante, UUID> {
 
   @Query("SELECT e FROM Estudiante e WHERE e.idUsuario = :idUsuario")
   Optional<Estudiante> findByIdUsuario(@Param("idUsuario") UUID idUsuario);
+
+  @Query("SELECT e FROM Estudiante e WHERE e.codigoEstudiante = :codigo")
+  Optional<Estudiante> findByCodigo(@Param("codigo") String codigo);
 }

@@ -62,5 +62,8 @@ public class Empleado {
   private List<EvaluacionSocioeconomica> evaluacionesSocioeconomicas;
 
   @OneToMany(mappedBy = "empleado", cascade = CascadeType.ALL)
+  private List<PromedioPonderado> promedios;
+
+  @OneToMany(mappedBy = "empleado", cascade = CascadeType.ALL)
   private List<Matricula> matriculas;
 }

@@ -55,4 +55,8 @@ public class PromedioPonderado {
 
   @UpdateTimestamp
   private Instant updatedAt;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "id_empleado", nullable = false)
+  private Empleado empleado;
 }
