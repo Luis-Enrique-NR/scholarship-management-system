@@ -45,6 +45,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class ConvocatoriaServiceTest {
@@ -57,6 +58,9 @@ class ConvocatoriaServiceTest {
 
     @Mock
     private EmpleadoService empleadoService;
+
+    @Mock
+    private EvaluacionPostulanteService evaluacionPostulanteService;
 
     @InjectMocks
     private ConvocatoriaService convocatoriaService;
@@ -258,10 +262,14 @@ class ConvocatoriaServiceTest {
     }
 
     @Test
-    void actualizarEstadosConvocatorias_DeberiaLlamarRepositoriosCorrectamente() {
+    void actualizarEstadosConvocatorias_DeberiaEvaluarPostulantes_CuandoHayConvocatoriasCerradas() {
         // Arrange
         when(convocatoriaRepository.aperturarConvocatoriasVigentes(any(LocalDate.class))).thenReturn(1);
         when(convocatoriaRepository.cerrarConvocatoriasExpiradas(any(LocalDate.class))).thenReturn(1);
+        
+        Convocatoria convocatoriaCerrada = new Convocatoria();
+        convocatoriaCerrada.setId(1);
+        when(evaluacionPostulanteService.evaluarPostulantes()).thenReturn(5);
 
         // Act
         convocatoriaService.actualizarEstadosConvocatorias();
@@ -269,6 +277,25 @@ class ConvocatoriaServiceTest {
         // Assert
         verify(convocatoriaRepository, times(1)).aperturarConvocatoriasVigentes(any(LocalDate.class));
         verify(convocatoriaRepository, times(1)).cerrarConvocatoriasExpiradas(any(LocalDate.class));
+        // verify(convocatoriaRepository, times(1)).getUltimaConvocatoriaCerrada(); // Eliminado según requerimiento
+        verify(evaluacionPostulanteService, times(1)).evaluarPostulantes();
+    }
+
+    @Test
+    void actualizarEstadosConvocatorias_NoDeberiaEvaluarPostulantes_CuandoNoHayConvocatoriasCerradas() {
+        // Arrange
+        when(convocatoriaRepository.aperturarConvocatoriasVigentes(any(LocalDate.class))).thenReturn(1);
+        when(convocatoriaRepository.cerrarConvocatoriasExpiradas(any(LocalDate.class))).thenReturn(0);
+
+
+        // Act
+        convocatoriaService.actualizarEstadosConvocatorias();
+
+        // Assert
+        verify(convocatoriaRepository, times(1)).aperturarConvocatoriasVigentes(any(LocalDate.class));
+        verify(convocatoriaRepository, times(1)).cerrarConvocatoriasExpiradas(any(LocalDate.class));
+        // verify(convocatoriaRepository, times(1)).getUltimaConvocatoriaCerrada(); // Eliminado según requerimiento
+        verify(evaluacionPostulanteService, never()).evaluarPostulantes();
     }
 
     @Test

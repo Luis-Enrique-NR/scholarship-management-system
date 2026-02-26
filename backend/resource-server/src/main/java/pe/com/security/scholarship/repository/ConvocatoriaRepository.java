@@ -89,4 +89,12 @@ public interface ConvocatoriaRepository extends JpaRepository<Convocatoria, Inte
   @Query("UPDATE Convocatoria c SET c.estado = 'APERTURADO' " +
           "WHERE c.estado = 'PROGRAMADO' AND c.fechaInicio <= :hoy")
   int aperturarConvocatoriasVigentes(@Param("hoy") LocalDate hoy);
+
+  @Query(value = "select * " +
+          "from convocatorias c " +
+          "where extract(year from c.fecha_fin) = extract(year from current_date) " +
+          "and c.estado = 'CERRADO' " +
+          "order by c.fecha_fin desc " +
+          "limit 1", nativeQuery = true)
+  Optional<Convocatoria> getUltimaConvocatoriaCerrada();
 }

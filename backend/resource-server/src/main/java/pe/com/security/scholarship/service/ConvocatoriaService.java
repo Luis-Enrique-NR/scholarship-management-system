@@ -41,6 +41,7 @@ public class ConvocatoriaService {
   private final ConvocatoriaRepository convocatoriaRepository;
   private final EmpleadoRepository empleadoRepository;
   private final EmpleadoService empleadoService;
+  private final EvaluacionPostulanteService evaluacionPostulanteService;
 
   @Transactional
   public RegisteredConvocatoriaResponse registerConvocatoria(RegisterConvocatoriaRequest request) {
@@ -121,7 +122,7 @@ public class ConvocatoriaService {
   // Tareas programadas: Actualizar el estado de las convocatorias a media noche
 
   @Transactional
-  @Scheduled(cron = "0 0 0 * * *")//"0 0 0 * * *"
+  @Scheduled(cron = "0 0 0 * * *") // "0 0 0 * * *" para 1 hora, "0 0/15 * * * *" para 15 min
   @Retryable(
           retryFor = { TransactionSystemException.class },
           maxAttempts = 5,
@@ -134,6 +135,12 @@ public class ConvocatoriaService {
     int cerradas = convocatoriaRepository.cerrarConvocatoriasExpiradas(LocalDate.now());
 
     System.out.println("Cron exitoso: "+aperturadas+" abiertas, "+cerradas+" cerradas");
+
+    // insertar la funcion para el procesamiento en lote
+    if (cerradas>0) {
+      int postulacionesActualizadas = evaluacionPostulanteService.evaluarPostulantes();
+      System.out.println("Actualización exitosa de "+postulacionesActualizadas+" postulantes");
+    }
   }
 
   @Recover
