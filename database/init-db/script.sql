@@ -80,6 +80,7 @@ create table convocatorias (
 	fecha_fin date not null,
 	estado varchar(10) not null,
 	cantidad_vacantes INT NOT null,
+	modo_evaluacion VARCHAR(20) NOT NULL,
 	
 	created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ,
@@ -277,3 +278,10 @@ FOR EACH ROW EXECUTE FUNCTION fn_update_timestamp();
 CREATE TRIGGER trg_matriculas_updated_at
 BEFORE UPDATE ON matriculas
 FOR EACH ROW EXECUTE FUNCTION fn_update_timestamp();
+
+---
+
+--- Sequence para batches
+ALTER SEQUENCE evaluaciones_socioeconomicas_id_seq INCREMENT BY 50;
+
+ALTER SEQUENCE promedios_ponderados_id_seq INCREMENT BY 50;

@@ -13,9 +13,11 @@ import pe.com.security.scholarship.domain.entity.Convocatoria;
 import pe.com.security.scholarship.domain.entity.Empleado;
 import pe.com.security.scholarship.domain.enums.EstadoConvocatoria;
 import pe.com.security.scholarship.domain.enums.Mes;
+import pe.com.security.scholarship.domain.enums.ModoEvaluacion;
 import pe.com.security.scholarship.dto.projection.RankingProjection;
 import pe.com.security.scholarship.dto.projection.TasasConvocatoriaProjection;
 import pe.com.security.scholarship.dto.request.RegisterConvocatoriaRequest;
+import pe.com.security.scholarship.dto.request.UpdateEstadoConvocatoriaRequest;
 import pe.com.security.scholarship.dto.response.AuditEmpleadoResponse;
 import pe.com.security.scholarship.dto.response.ConvocatoriaAbiertaResponse;
 import pe.com.security.scholarship.dto.response.DetalleConvocatoriaResponse;
@@ -42,6 +44,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -57,6 +60,9 @@ class ConvocatoriaServiceTest {
 
     @Mock
     private EmpleadoService empleadoService;
+
+    @Mock
+    private EvaluacionPostulanteService evaluacionPostulanteService;
 
     @InjectMocks
     private ConvocatoriaService convocatoriaService;
@@ -75,6 +81,7 @@ class ConvocatoriaServiceTest {
         request.setFechaInicio(LocalDate.now());
         request.setFechaFin(LocalDate.now().plusDays(30));
         request.setCantidadVacantes(10);
+        request.setModoEvaluacion(ModoEvaluacion.MIXTO);
 
         Empleado empleado = new Empleado();
         empleado.setIdUsuario(idUsuario);
@@ -91,6 +98,7 @@ class ConvocatoriaServiceTest {
                 .fechaFin(request.getFechaFin())
                 .estado(EstadoConvocatoria.PROGRAMADO)
                 .cantidadVacantes(request.getCantidadVacantes())
+                .modoEvaluacion(request.getModoEvaluacion())
                 .createdBy(empleado)
                 .build();
 
@@ -109,6 +117,7 @@ class ConvocatoriaServiceTest {
             assertThat(response).isNotNull();
             assertThat(response.getMes()).isEqualTo(request.getMes());
             assertThat(response.getCantidadVacantes()).isEqualTo(request.getCantidadVacantes());
+            assertThat(response.getModoEvaluacion()).isEqualTo(request.getModoEvaluacion());
             assertThat(response.getCreatedBy()).isEqualTo(auditResponse);
             
             verify(empleadoRepository, times(1)).findByIdUsuario(idUsuario);
@@ -123,6 +132,7 @@ class ConvocatoriaServiceTest {
         RegisterConvocatoriaRequest request = new RegisterConvocatoriaRequest();
         request.setFechaInicio(LocalDate.now().plusDays(10));
         request.setFechaFin(LocalDate.now()); // Fecha fin anterior a inicio
+        request.setModoEvaluacion(ModoEvaluacion.MIXTO);
 
         // Act & Assert
         assertThatThrownBy(() -> convocatoriaService.registerConvocatoria(request))
@@ -137,6 +147,7 @@ class ConvocatoriaServiceTest {
         RegisterConvocatoriaRequest request = new RegisterConvocatoriaRequest();
         request.setFechaInicio(LocalDate.now());
         request.setFechaFin(LocalDate.now().plusDays(30));
+        request.setModoEvaluacion(ModoEvaluacion.MIXTO);
 
         try (MockedStatic<SecurityUtils> securityUtilsMock = mockStatic(SecurityUtils.class)) {
             securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
@@ -158,6 +169,7 @@ class ConvocatoriaServiceTest {
         request.setMes(Mes.ENERO);
         request.setFechaInicio(LocalDate.now());
         request.setFechaFin(LocalDate.now().plusDays(30));
+        request.setModoEvaluacion(ModoEvaluacion.MIXTO);
 
         Empleado empleado = new Empleado();
         empleado.setIdUsuario(idUsuario);
@@ -189,6 +201,7 @@ class ConvocatoriaServiceTest {
         request.setFechaInicio(LocalDate.now());
         request.setFechaFin(LocalDate.now().plusDays(30));
         request.setCantidadVacantes(10);
+        request.setModoEvaluacion(ModoEvaluacion.MIXTO);
 
         Empleado empleado = new Empleado();
         empleado.setIdUsuario(idUsuario);
@@ -204,6 +217,7 @@ class ConvocatoriaServiceTest {
         
         Convocatoria convocatoriaGuardada = Convocatoria.builder()
                 .mes(request.getMes())
+                .modoEvaluacion(request.getModoEvaluacion())
                 .build();
 
         try (MockedStatic<SecurityUtils> securityUtilsMock = mockStatic(SecurityUtils.class)) {
@@ -231,6 +245,7 @@ class ConvocatoriaServiceTest {
         request.setMes(Mes.FEBRERO);
         request.setFechaInicio(LocalDate.now().plusDays(10));
         request.setFechaFin(LocalDate.now().plusDays(20));
+        request.setModoEvaluacion(ModoEvaluacion.MIXTO);
 
         Empleado empleado = new Empleado();
         empleado.setIdUsuario(idUsuario);
@@ -258,17 +273,36 @@ class ConvocatoriaServiceTest {
     }
 
     @Test
-    void actualizarEstadosConvocatorias_DeberiaLlamarRepositoriosCorrectamente() {
+    void actualizarEstadosConvocatorias_DeberiaEvaluarPostulantes_CuandoHayConvocatoriasCerradas() {
         // Arrange
         when(convocatoriaRepository.aperturarConvocatoriasVigentes(any(LocalDate.class))).thenReturn(1);
         when(convocatoriaRepository.cerrarConvocatoriasExpiradas(any(LocalDate.class))).thenReturn(1);
+
+        when(evaluacionPostulanteService.evaluarPostulantes()).thenReturn(5);
 
         // Act
         convocatoriaService.actualizarEstadosConvocatorias();
 
         // Assert
-        verify(convocatoriaRepository, times(1)).aperturarConvocatoriasVigentes(any(LocalDate.class));
-        verify(convocatoriaRepository, times(1)).cerrarConvocatoriasExpiradas(any(LocalDate.class));
+        verify(convocatoriaRepository).aperturarConvocatoriasVigentes(any(LocalDate.class));
+        verify(convocatoriaRepository).cerrarConvocatoriasExpiradas(any(LocalDate.class));
+        verify(evaluacionPostulanteService, times(1)).evaluarPostulantes();
+    }
+
+    @Test
+    void actualizarEstadosConvocatorias_NoDeberiaEvaluarPostulantes_CuandoNoHayConvocatoriasCerradas() {
+        // Arrange
+        when(convocatoriaRepository.aperturarConvocatoriasVigentes(any(LocalDate.class))).thenReturn(1);
+        when(convocatoriaRepository.cerrarConvocatoriasExpiradas(any(LocalDate.class))).thenReturn(0);
+
+        // Act
+        convocatoriaService.actualizarEstadosConvocatorias();
+
+        // Assert
+        verify(convocatoriaRepository).aperturarConvocatoriasVigentes(any(LocalDate.class));
+        verify(convocatoriaRepository).cerrarConvocatoriasExpiradas(any(LocalDate.class));
+        // Importante: verificar que el servicio de evaluación NUNCA se llamó
+        verify(evaluacionPostulanteService, never()).evaluarPostulantes();
     }
 
     @Test
@@ -390,6 +424,7 @@ class ConvocatoriaServiceTest {
                 .fechaFin(LocalDate.now().plusDays(30))
                 .estado(EstadoConvocatoria.APERTURADO)
                 .cantidadVacantes(100)
+                .modoEvaluacion(ModoEvaluacion.MIXTO)
                 .build();
 
         AuditEmpleadoResponse auditResponse = AuditEmpleadoResponse.builder()
@@ -399,7 +434,8 @@ class ConvocatoriaServiceTest {
 
         TasasConvocatoriaProjection tasas = mock(TasasConvocatoriaProjection.class);
         when(tasas.getTasaAceptacion()).thenReturn(0.75);
-        when(tasas.getTasaMatriculados()).thenReturn(60.0);
+        when(tasas.getTasaMatriculados()).thenReturn(0.60);
+        when(tasas.getTasaVacantesCubiertas()).thenReturn(0.95); // Nuevo campo
 
         RankingProjection ranking1 = mock(RankingProjection.class);
 
@@ -419,6 +455,9 @@ class ConvocatoriaServiceTest {
         assertThat(response.getDatosGeneralesConvocatoria().getMes().equals(Mes.ENERO));
         assertThat(response.getCantidadPostulantes()).isEqualTo(100);
         assertThat(response.getTasaAceptacion()).isEqualTo("75%");
+        assertThat(response.getTasaVacantesCubiertas()).isEqualTo("95%");
+        assertThat(response.getTasaMatriculados()).isEqualTo("60%");
+        assertThat(response.getModoEvaluacion()).isEqualTo(ModoEvaluacion.MIXTO);
         assertThat(response.getRankingSocioeconomico()).hasSize(1);
     }
 
@@ -460,11 +499,13 @@ class ConvocatoriaServiceTest {
         Convocatoria convocatoria = Convocatoria.builder()
                 .id(id)
                 .mes(Mes.ENERO)
+                .modoEvaluacion(ModoEvaluacion.MIXTO)
                 .build();
 
         TasasConvocatoriaProjection tasas = mock(TasasConvocatoriaProjection.class);
         when(tasas.getTasaAceptacion()).thenReturn(0.0);
         when(tasas.getTasaMatriculados()).thenReturn(0.0);
+        when(tasas.getTasaVacantesCubiertas()).thenReturn(0.0); // Nuevo campo
 
         when(convocatoriaRepository.findById(id)).thenReturn(Optional.of(convocatoria));
         when(empleadoService.obtenerAuditoriaActual()).thenReturn(AuditEmpleadoResponse.builder().build());
@@ -482,5 +523,62 @@ class ConvocatoriaServiceTest {
         assertThat(response.getRankingSocioeconomico()).isEmpty();
         assertThat(response.getRankingCiclos()).isEmpty();
         assertThat(response.getRankingCarreras()).isEmpty();
+    }
+
+    @Test
+    void actualizarEstadoConvocatoria_Exitoso() {
+        // Arrange
+        Integer idConvocatoria = 1;
+        EstadoConvocatoria nuevoEstado = EstadoConvocatoria.APROBADO;
+        UpdateEstadoConvocatoriaRequest request = new UpdateEstadoConvocatoriaRequest();
+        request.setIdConvocatoria(idConvocatoria);
+        request.setEstadoConvocatoria(nuevoEstado);
+
+        when(convocatoriaRepository.updateEstadoConvocatoria(idConvocatoria, nuevoEstado)).thenReturn(1);
+
+        // Mock para getDetalleConvocatoria
+        Convocatoria convocatoria = Convocatoria.builder()
+                .id(idConvocatoria)
+                .mes(Mes.ENERO)
+                .estado(nuevoEstado)
+                .modoEvaluacion(ModoEvaluacion.MIXTO)
+                .build();
+        when(convocatoriaRepository.findById(idConvocatoria)).thenReturn(Optional.of(convocatoria));
+        
+        AuditEmpleadoResponse auditResponse = AuditEmpleadoResponse.builder().build();
+        when(empleadoService.obtenerAuditoriaActual()).thenReturn(auditResponse);
+        
+        TasasConvocatoriaProjection tasas = mock(TasasConvocatoriaProjection.class);
+        when(tasas.getTasaVacantesCubiertas()).thenReturn(0.0); // Mock para evitar NPE en mapper
+        when(convocatoriaRepository.getTasasGenerales(idConvocatoria)).thenReturn(tasas);
+
+        // Act
+        DetalleConvocatoriaResponse response = convocatoriaService.actualizarEstadoConvocatoria(request);
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getDatosGeneralesConvocatoria().getEstado()).isEqualTo(nuevoEstado);
+        verify(convocatoriaRepository).updateEstadoConvocatoria(idConvocatoria, nuevoEstado);
+        verify(convocatoriaRepository).findById(idConvocatoria);
+    }
+
+    @Test
+    void actualizarEstadoConvocatoria_NoEncontrado() {
+        // Arrange
+        Integer idConvocatoria = 99;
+        EstadoConvocatoria nuevoEstado = EstadoConvocatoria.RECHAZADO;
+        UpdateEstadoConvocatoriaRequest request = new UpdateEstadoConvocatoriaRequest();
+        request.setIdConvocatoria(idConvocatoria);
+        request.setEstadoConvocatoria(nuevoEstado);
+
+        when(convocatoriaRepository.updateEstadoConvocatoria(idConvocatoria, nuevoEstado)).thenReturn(0);
+
+        // Act & Assert
+        assertThatThrownBy(() -> convocatoriaService.actualizarEstadoConvocatoria(request))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessage("No se encontró convocatoria con el id: " + idConvocatoria);
+
+        verify(convocatoriaRepository).updateEstadoConvocatoria(idConvocatoria, nuevoEstado);
+        verify(convocatoriaRepository, never()).findById(anyInt());
     }
 }

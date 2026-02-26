@@ -11,6 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -37,7 +38,12 @@ import java.util.UUID;
 public class EvaluacionSocioeconomica {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "eval_socio_seq")
+  @SequenceGenerator(
+          name = "eval_socio_seq",
+          sequenceName = "evaluaciones_socioeconomicas_id_seq",
+          allocationSize = 50
+  )
   private Integer id;
 
   @ManyToOne(fetch = FetchType.LAZY)

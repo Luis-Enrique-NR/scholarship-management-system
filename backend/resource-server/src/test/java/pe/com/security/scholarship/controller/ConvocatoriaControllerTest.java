@@ -9,8 +9,11 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import pe.com.security.scholarship.config.ResourceServerTest;
+import pe.com.security.scholarship.domain.enums.EstadoConvocatoria;
 import pe.com.security.scholarship.domain.enums.Mes;
+import pe.com.security.scholarship.domain.enums.ModoEvaluacion;
 import pe.com.security.scholarship.dto.request.RegisterConvocatoriaRequest;
+import pe.com.security.scholarship.dto.request.UpdateEstadoConvocatoriaRequest;
 import pe.com.security.scholarship.dto.response.ConvocatoriaAbiertaResponse;
 import pe.com.security.scholarship.dto.response.DetalleConvocatoriaResponse;
 import pe.com.security.scholarship.dto.response.HistorialConvocatoriaResponse;
@@ -28,6 +31,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -53,10 +57,12 @@ class ConvocatoriaControllerTest {
         request.setFechaInicio(LocalDate.now());
         request.setFechaFin(LocalDate.now().plusDays(30));
         request.setCantidadVacantes(10);
+        request.setModoEvaluacion(ModoEvaluacion.MIXTO);
 
         RegisteredConvocatoriaResponse response = RegisteredConvocatoriaResponse.builder()
                 .mes(Mes.ENERO)
                 .cantidadVacantes(10)
+                .modoEvaluacion(ModoEvaluacion.MIXTO)
                 .build();
 
         when(convocatoriaService.registerConvocatoria(any(RegisterConvocatoriaRequest.class))).thenReturn(response);
@@ -70,7 +76,8 @@ class ConvocatoriaControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.mes").value("ENERO"))
-                .andExpect(jsonPath("$.data.cantidadVacantes").value(10));
+                .andExpect(jsonPath("$.data.cantidadVacantes").value(10))
+                .andExpect(jsonPath("$.data.modoEvaluacion").value("MIXTO"));
 
         verify(convocatoriaService, times(1)).registerConvocatoria(any(RegisterConvocatoriaRequest.class));
     }
@@ -104,6 +111,8 @@ class ConvocatoriaControllerTest {
         DetalleConvocatoriaResponse response = DetalleConvocatoriaResponse.builder()
                 .datosGeneralesConvocatoria(datosGenerales)
                 .cantidadPostulantes(100)
+                .tasaVacantesCubiertas("80%") // Nuevo campo
+                .modoEvaluacion(ModoEvaluacion.MIXTO)
                 .build();
 
         when(convocatoriaService.getDetalleConvocatoria(id)).thenReturn(response);
@@ -116,7 +125,9 @@ class ConvocatoriaControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Consulta exitosa"))
                 .andExpect(jsonPath("$.data.datosGeneralesConvocatoria.mes").value("ENERO"))
-                .andExpect(jsonPath("$.data.cantidadPostulantes").value(100));
+                .andExpect(jsonPath("$.data.cantidadPostulantes").value(100))
+                .andExpect(jsonPath("$.data.tasaVacantesCubiertas").value("80%")) // Verificación del nuevo campo
+                .andExpect(jsonPath("$.data.modoEvaluacion").value("MIXTO"));
 
         verify(convocatoriaService, times(1)).getDetalleConvocatoria(id);
     }
@@ -237,5 +248,74 @@ class ConvocatoriaControllerTest {
                 .andExpect(status().isUnauthorized());
 
         verify(convocatoriaService, times(0)).getHistorialConvocatorias(year);
+    }
+
+    @Test
+    void actualizarEstadoConvocatoria_Exitoso() throws Exception {
+        // Arrange
+        UpdateEstadoConvocatoriaRequest request = new UpdateEstadoConvocatoriaRequest();
+        request.setIdConvocatoria(1);
+        request.setEstadoConvocatoria(EstadoConvocatoria.CERRADO);
+
+        HistorialConvocatoriaResponse datosGenerales = HistorialConvocatoriaResponse.builder()
+                .mes(Mes.ENERO)
+                .estado(EstadoConvocatoria.CERRADO)
+                .build();
+
+        DetalleConvocatoriaResponse response = DetalleConvocatoriaResponse.builder()
+                .datosGeneralesConvocatoria(datosGenerales)
+                .tasaVacantesCubiertas("100%")
+                .build();
+
+        when(convocatoriaService.actualizarEstadoConvocatoria(any(UpdateEstadoConvocatoriaRequest.class)))
+                .thenReturn(response);
+
+        // Act & Assert
+        mockMvc.perform(patch("/api/v1/convocatorias/estado")
+                        .with(csrf())
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_SOCIAL_OUTREACH_MANAGER")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Actualización exitosa"))
+                .andExpect(jsonPath("$.data.tasaVacantesCubiertas").value("100%"))
+                .andExpect(jsonPath("$.data.datosGeneralesConvocatoria.estado").value("CERRADO"));
+
+        verify(convocatoriaService, times(1)).actualizarEstadoConvocatoria(any(UpdateEstadoConvocatoriaRequest.class));
+    }
+
+    @Test
+    void actualizarEstadoConvocatoria_Forbidden() throws Exception {
+        // Arrange
+        UpdateEstadoConvocatoriaRequest request = new UpdateEstadoConvocatoriaRequest();
+        request.setIdConvocatoria(1);
+        request.setEstadoConvocatoria(EstadoConvocatoria.CERRADO);
+
+        // Act & Assert
+        mockMvc.perform(patch("/api/v1/convocatorias/estado")
+                        .with(csrf())
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_STUDENT")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden());
+
+        verify(convocatoriaService, times(0)).actualizarEstadoConvocatoria(any(UpdateEstadoConvocatoriaRequest.class));
+    }
+
+    @Test
+    void actualizarEstadoConvocatoria_BadRequest() throws Exception {
+        // Arrange
+        UpdateEstadoConvocatoriaRequest request = new UpdateEstadoConvocatoriaRequest();
+        // Leaving fields null to trigger @Valid
+
+        // Act & Assert
+        mockMvc.perform(patch("/api/v1/convocatorias/estado")
+                        .with(csrf())
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_SOCIAL_OUTREACH_MANAGER")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+
+        verify(convocatoriaService, times(0)).actualizarEstadoConvocatoria(any(UpdateEstadoConvocatoriaRequest.class));
     }
 }

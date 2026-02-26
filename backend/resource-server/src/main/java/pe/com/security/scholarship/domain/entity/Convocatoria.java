@@ -24,6 +24,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import pe.com.security.scholarship.domain.enums.EstadoConvocatoria;
 import pe.com.security.scholarship.domain.enums.Mes;
+import pe.com.security.scholarship.domain.enums.ModoEvaluacion;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -59,6 +60,10 @@ public class Convocatoria {
 
   @Column(nullable = false)
   private Integer cantidadVacantes;
+
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private ModoEvaluacion modoEvaluacion;
 
   @CreatedDate
   @Column(nullable = false, updatable = false)

@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import pe.com.security.scholarship.dto.projection.RankingProjection;
 import pe.com.security.scholarship.dto.projection.TasasConvocatoriaProjection;
 import pe.com.security.scholarship.dto.request.RegisterConvocatoriaRequest;
+import pe.com.security.scholarship.dto.request.UpdateEstadoConvocatoriaRequest;
 import pe.com.security.scholarship.dto.response.AuditEmpleadoResponse;
 import pe.com.security.scholarship.dto.response.ConvocatoriaAbiertaResponse;
 import pe.com.security.scholarship.dto.response.DetalleConvocatoriaResponse;
@@ -41,6 +42,7 @@ public class ConvocatoriaService {
   private final ConvocatoriaRepository convocatoriaRepository;
   private final EmpleadoRepository empleadoRepository;
   private final EmpleadoService empleadoService;
+  private final EvaluacionPostulanteService evaluacionPostulanteService;
 
   @Transactional
   public RegisteredConvocatoriaResponse registerConvocatoria(RegisterConvocatoriaRequest request) {
@@ -118,10 +120,19 @@ public class ConvocatoriaService {
             rankingSocioeconomico, rankingCiclo, rankingCarrera);
   }
 
+  @Transactional
+  public DetalleConvocatoriaResponse actualizarEstadoConvocatoria(UpdateEstadoConvocatoriaRequest request) {
+    int filasAfectadas = convocatoriaRepository.updateEstadoConvocatoria(request.getIdConvocatoria(), request.getEstadoConvocatoria());
+    if (filasAfectadas == 0) {
+      throw new NotFoundException("No se encontró convocatoria con el id: " + request.getIdConvocatoria());
+    }
+    return getDetalleConvocatoria(request.getIdConvocatoria());
+  }
+
   // Tareas programadas: Actualizar el estado de las convocatorias a media noche
 
   @Transactional
-  @Scheduled(cron = "0 0 0 * * *")//"0 0 0 * * *"
+  @Scheduled(cron = "0 0 0 * * *") // "0 0 0 * * *" para 1 hora, "0 0/15 * * * *" para 15 min
   @Retryable(
           retryFor = { TransactionSystemException.class },
           maxAttempts = 5,
@@ -134,6 +145,12 @@ public class ConvocatoriaService {
     int cerradas = convocatoriaRepository.cerrarConvocatoriasExpiradas(LocalDate.now());
 
     System.out.println("Cron exitoso: "+aperturadas+" abiertas, "+cerradas+" cerradas");
+
+    // insertar la funcion para el procesamiento en lote
+    if (cerradas>0) {
+      int postulacionesActualizadas = evaluacionPostulanteService.evaluarPostulantes();
+      System.out.println("Actualización exitosa de "+postulacionesActualizadas+" postulantes");
+    }
   }
 
   @Recover

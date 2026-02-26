@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Data;
 import pe.com.security.scholarship.domain.enums.Mes;
+import pe.com.security.scholarship.domain.enums.ModoEvaluacion;
 
 import java.time.LocalDate;
 
@@ -22,4 +23,6 @@ public class RegisterConvocatoriaRequest {
   @NotNull(message = "El campo es obligatorio")
   @Positive(message = "Debe ser un número positivo")
   private Integer cantidadVacantes;
+  @NotNull(message = "Modo de evaluación obligatorio")
+  private ModoEvaluacion modoEvaluacion;
 }

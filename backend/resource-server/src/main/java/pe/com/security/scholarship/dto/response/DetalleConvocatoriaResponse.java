@@ -2,6 +2,7 @@ package pe.com.security.scholarship.dto.response;
 
 import lombok.Builder;
 import lombok.Data;
+import pe.com.security.scholarship.domain.enums.ModoEvaluacion;
 import pe.com.security.scholarship.dto.projection.RankingProjection;
 
 import java.util.List;
@@ -14,9 +15,11 @@ public class DetalleConvocatoriaResponse {
   private AuditEmpleadoResponse createdBy;
   private Integer cantidadVacantes;
   private Integer cantidadPostulantes;
+  private ModoEvaluacion modoEvaluacion;
 
   private String tasaAceptacion;
   private String tasaMatriculados;
+  private String tasaVacantesCubiertas;
 
   private List<RankingProjection> rankingSocioeconomico;
   private List<RankingProjection> rankingCiclos;
