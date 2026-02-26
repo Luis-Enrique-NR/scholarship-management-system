@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import pe.com.security.scholarship.domain.enums.EstadoConvocatoria;
 import pe.com.security.scholarship.domain.enums.Mes;
+import pe.com.security.scholarship.domain.enums.ModoEvaluacion;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -14,6 +15,7 @@ import java.time.LocalDate;
 public class RegisteredConvocatoriaResponse {
   private Integer id;
   private Mes mes;
+  private ModoEvaluacion modoEvaluacion;
   private LocalDate fechaInicio;
   private LocalDate fechaFin;
   private EstadoConvocatoria estado;

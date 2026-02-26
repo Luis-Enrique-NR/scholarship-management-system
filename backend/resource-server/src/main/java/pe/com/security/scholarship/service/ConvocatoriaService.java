@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import pe.com.security.scholarship.dto.projection.RankingProjection;
 import pe.com.security.scholarship.dto.projection.TasasConvocatoriaProjection;
 import pe.com.security.scholarship.dto.request.RegisterConvocatoriaRequest;
+import pe.com.security.scholarship.dto.request.UpdateEstadoConvocatoriaRequest;
 import pe.com.security.scholarship.dto.response.AuditEmpleadoResponse;
 import pe.com.security.scholarship.dto.response.ConvocatoriaAbiertaResponse;
 import pe.com.security.scholarship.dto.response.DetalleConvocatoriaResponse;
@@ -117,6 +118,15 @@ public class ConvocatoriaService {
 
     return ConvocatoriaMapper.mapDetalleConvocatoria(convocatoria, auditEmpleadoResponse, cantidadPostulantes, tasas,
             rankingSocioeconomico, rankingCiclo, rankingCarrera);
+  }
+
+  @Transactional
+  public DetalleConvocatoriaResponse actualizarEstadoConvocatoria(UpdateEstadoConvocatoriaRequest request) {
+    int filasAfectadas = convocatoriaRepository.updateEstadoConvocatoria(request.getIdConvocatoria(), request.getEstadoConvocatoria());
+    if (filasAfectadas == 0) {
+      throw new NotFoundException("No se encontró convocatoria con el id: " + request.getIdConvocatoria());
+    }
+    return getDetalleConvocatoria(request.getIdConvocatoria());
   }
 
   // Tareas programadas: Actualizar el estado de las convocatorias a media noche
