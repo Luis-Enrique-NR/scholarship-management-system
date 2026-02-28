@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import pe.com.security.scholarship.domain.entity.Postulacion;
+import pe.com.security.scholarship.domain.enums.EstadoMatricula;
 import pe.com.security.scholarship.dto.projection.PostulanteConvocatoriaProjection;
 import pe.com.security.scholarship.dto.projection.PostulanteEvaluacionProjection;
 
@@ -142,4 +143,19 @@ public interface PostulacionRepository extends JpaRepository<Postulacion, Intege
   nativeQuery = true)
   Page<PostulanteConvocatoriaProjection> buscarPostulantesConvocatoria(@Param("idConvocatoria") Integer idConvocatoria,
           Pageable pageable);
+
+  @Query("SELECT p FROM Postulacion p " +
+          "LEFT JOIN FETCH p.matriculas m " +
+          "LEFT JOIN FETCH p.convocatoria c " +
+          "LEFT JOIN FETCH p.cursos cp " +
+          "LEFT JOIN FETCH m.seccion s " +
+          "WHERE p.estudiante.id = :idEstudiante " +
+          "AND YEAR(p.fechaPostulacion) = :year " +
+          "AND (m.estado = :estado OR m IS NULL)" +
+          "ORDER BY p.fechaPostulacion DESC")
+  List<Postulacion> findByYearWithMatricula(
+          @Param("idEstudiante") UUID idEstudiante,
+          @Param("year") Integer year,
+          @Param("estado") EstadoMatricula estado
+  );
 }

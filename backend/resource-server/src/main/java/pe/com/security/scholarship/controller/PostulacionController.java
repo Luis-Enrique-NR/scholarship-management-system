@@ -15,12 +15,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import pe.com.security.scholarship.dto.request.RegisterPostulacionRequest;
 import pe.com.security.scholarship.dto.response.ConsultaPostulacionResponse;
+import pe.com.security.scholarship.dto.response.DetallePostulanteResponse;
 import pe.com.security.scholarship.dto.response.HistorialPostulacionResponse;
 import pe.com.security.scholarship.dto.response.RegisteredPostulacionResponse;
 import pe.com.security.scholarship.service.PostulacionService;
 import pe.com.security.scholarship.util.ApiResponse;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/postulaciones")
@@ -57,6 +59,16 @@ public class PostulacionController {
           @RequestParam Integer year
   ) {
     List<HistorialPostulacionResponse> response = postulacionService.getHistorialPostulacion(year);
+    return ResponseEntity.ok(new ApiResponse<>("Consulta exitosa", "200", response));
+  }
+
+  @GetMapping("/{id}/{year}")
+  @PreAuthorize("hasRole('SOCIAL_OUTREACH_SECRETARY') or hasRole('SOCIAL_OUTREACH_MANAGER')")
+  public ResponseEntity<ApiResponse<DetallePostulanteResponse>> getPostulacionesEstudiante(
+          @PathVariable UUID id,
+          @PathVariable Integer year
+  ) {
+    DetallePostulanteResponse response = postulacionService.getPostulacionesEstudiante(id, year);
     return ResponseEntity.ok(new ApiResponse<>("Consulta exitosa", "200", response));
   }
 }

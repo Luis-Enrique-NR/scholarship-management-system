@@ -11,12 +11,16 @@ import pe.com.security.scholarship.domain.entity.Convocatoria;
 import pe.com.security.scholarship.domain.entity.Curso;
 import pe.com.security.scholarship.domain.entity.Estudiante;
 import pe.com.security.scholarship.domain.entity.Postulacion;
+import pe.com.security.scholarship.domain.enums.EstadoMatricula;
+import pe.com.security.scholarship.dto.projection.IdentificacionEstudianteProjection;
 import pe.com.security.scholarship.dto.projection.PostulanteConvocatoriaProjection;
 import pe.com.security.scholarship.dto.request.RegisterPostulacionRequest;
 import pe.com.security.scholarship.dto.response.ConsultaPostulacionResponse;
 import pe.com.security.scholarship.dto.response.CursoPostulacionResponse;
+import pe.com.security.scholarship.dto.response.DetallePostulanteResponse;
 import pe.com.security.scholarship.dto.response.HistorialPostulacionResponse;
 import pe.com.security.scholarship.dto.response.RegisteredPostulacionResponse;
+import pe.com.security.scholarship.dto.response.ResultadoPostulacionResponse;
 import pe.com.security.scholarship.exception.BadRequestException;
 import pe.com.security.scholarship.exception.NotFoundException;
 import pe.com.security.scholarship.mapper.CursoMapper;
@@ -141,5 +145,24 @@ public class PostulacionService {
     );
 
     return postulacionRepository.buscarPostulantesConvocatoria(idConvocatoria, pageableAjustado);
+  }
+
+  // Obtener el detalle de postulaciones del presente año para un estudiante específico
+  @Transactional(readOnly = true)
+  public DetallePostulanteResponse getPostulacionesEstudiante(UUID idEstudiante, Integer year) {
+
+    IdentificacionEstudianteProjection estudiante = estudianteRepository.findDatosEstudiante(idEstudiante)
+            .orElseThrow(() -> new NotFoundException("No existe estudiante con el ID ingresado"));
+
+    List<Postulacion> postulacionesList = postulacionRepository.findByYearWithMatricula(idEstudiante, year, EstadoMatricula.ACEPTADO);
+
+    List<ResultadoPostulacionResponse> resultados = postulacionesList.stream()
+            .map(p -> ResultadoPostulacionResponse.builder()
+                    .postulacion(PostulacionMapper.mapInfoPostulacion(p))
+                    .matricula(p.getMatriculas().isEmpty() ? null : PostulacionMapper.mapInfoMatricula(p.getMatriculas().getFirst()))
+                    .build())
+            .toList();
+
+    return PostulacionMapper.mapDetallePostulante(idEstudiante, estudiante, resultados);
   }
 }

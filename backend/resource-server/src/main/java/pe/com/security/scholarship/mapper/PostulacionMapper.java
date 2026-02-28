@@ -3,14 +3,23 @@ package pe.com.security.scholarship.mapper;
 import pe.com.security.scholarship.domain.entity.Convocatoria;
 import pe.com.security.scholarship.domain.entity.Curso;
 import pe.com.security.scholarship.domain.entity.Estudiante;
+import pe.com.security.scholarship.domain.entity.Matricula;
 import pe.com.security.scholarship.domain.entity.Postulacion;
+import pe.com.security.scholarship.dto.projection.IdentificacionEstudianteProjection;
 import pe.com.security.scholarship.dto.response.ConsultaPostulacionResponse;
 import pe.com.security.scholarship.dto.response.CursoPostulacionResponse;
+import pe.com.security.scholarship.dto.response.DetallePostulanteResponse;
 import pe.com.security.scholarship.dto.response.HistorialPostulacionResponse;
+import pe.com.security.scholarship.dto.response.InformacionMatriculaResponse;
+import pe.com.security.scholarship.dto.response.InformacionPostulacionResponse;
 import pe.com.security.scholarship.dto.response.RegisteredPostulacionResponse;
+import pe.com.security.scholarship.dto.response.ResultadoPostulacionResponse;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class PostulacionMapper {
@@ -50,6 +59,35 @@ public class PostulacionMapper {
             .estado(getEstadoPostulacion(postulacion))
             .fechaPostulacion(postulacion.getFechaPostulacion())
             .mesConvocatoria(postulacion.getConvocatoria().getMes().name())
+            .build();
+  }
+
+  public static InformacionPostulacionResponse mapInfoPostulacion(Postulacion postulacion) {
+    return InformacionPostulacionResponse.builder()
+            .mesConvocatoria(postulacion.getConvocatoria().getMes().name())
+            .estadoPostulacion(getEstadoPostulacion(postulacion))
+            .fechaPostulacion(postulacion.getFechaPostulacion())
+            .promedioGeneral(postulacion.getPromedioGeneral())
+            .cursosOpciones(postulacion.getCursos().stream().map(Curso::getNombre).toList())
+            .build();
+  }
+
+  public static InformacionMatriculaResponse mapInfoMatricula(Matricula matricula) {
+    return InformacionMatriculaResponse.builder()
+            .fechaMatricula(LocalDate.ofInstant(matricula.getFechaMatricula(), ZoneId.systemDefault()))
+            .cursoMatriculado(matricula.getSeccion().getCurso().getNombre())
+            .notaMatricula(matricula.getNota())
+            .build();
+  }
+
+  public static DetallePostulanteResponse mapDetallePostulante(UUID idEstudiante,
+                                                               IdentificacionEstudianteProjection projection,
+                                                               List<ResultadoPostulacionResponse> postulaciones) {
+    return DetallePostulanteResponse.builder()
+            .idEstudiante(idEstudiante)
+            .nombreCompleto(projection.getNombreCompleto())
+            .codigoEstudiante(projection.getCodigoEstudiante())
+            .postulaciones(postulaciones)
             .build();
   }
 

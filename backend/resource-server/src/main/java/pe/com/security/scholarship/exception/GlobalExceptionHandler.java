@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 import pe.com.security.scholarship.util.ApiResponse;
@@ -40,5 +41,13 @@ public class GlobalExceptionHandler {
   @ExceptionHandler({MultipartException.class, MaxUploadSizeExceededException.class})
   public ResponseEntity<ApiResponse<Object>> handleMultipart(Exception e) {
     return buildResponse("El archivo enviado no es válido o excede los límites permitidos", HttpStatus.BAD_REQUEST);
+  }
+
+  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+  public ResponseEntity<ApiResponse<Object>> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+    String mensaje = String.format("El parámetro '%s' debe ser de tipo %s",
+            e.getName(),
+            e.getRequiredType().getSimpleName());
+    return buildResponse(mensaje, HttpStatus.BAD_REQUEST);
   }
 }

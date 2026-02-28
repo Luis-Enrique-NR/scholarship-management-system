@@ -16,15 +16,21 @@ import org.springframework.data.domain.Sort;
 import pe.com.security.scholarship.domain.entity.Convocatoria;
 import pe.com.security.scholarship.domain.entity.Curso;
 import pe.com.security.scholarship.domain.entity.Estudiante;
+import pe.com.security.scholarship.domain.entity.Matricula;
 import pe.com.security.scholarship.domain.entity.Postulacion;
+import pe.com.security.scholarship.domain.entity.Seccion;
 import pe.com.security.scholarship.domain.enums.EstadoConvocatoria;
+import pe.com.security.scholarship.domain.enums.EstadoMatricula;
 import pe.com.security.scholarship.domain.enums.Mes;
 import pe.com.security.scholarship.domain.enums.ModalidadCurso;
+import pe.com.security.scholarship.dto.projection.IdentificacionEstudianteProjection;
 import pe.com.security.scholarship.dto.projection.PostulanteConvocatoriaProjection;
 import pe.com.security.scholarship.dto.request.RegisterPostulacionRequest;
 import pe.com.security.scholarship.dto.response.ConsultaPostulacionResponse;
+import pe.com.security.scholarship.dto.response.DetallePostulanteResponse;
 import pe.com.security.scholarship.dto.response.HistorialPostulacionResponse;
 import pe.com.security.scholarship.dto.response.RegisteredPostulacionResponse;
+import pe.com.security.scholarship.dto.response.ResultadoPostulacionResponse;
 import pe.com.security.scholarship.exception.BadRequestException;
 import pe.com.security.scholarship.exception.NotFoundException;
 import pe.com.security.scholarship.repository.ConvocatoriaRepository;
@@ -516,5 +522,99 @@ class PostulacionServiceTest {
                 .hasMessage("No se puede ordenar por el campo: contraseña");
 
         verifyNoInteractions(postulacionRepository);
+    }
+
+    @Test
+    void getPostulacionesEstudiante_ShouldReturnResponse_WhenStudentExistsAndHasPostulaciones() {
+        // Arrange
+        UUID idEstudiante = UUID.randomUUID();
+        Integer year = 2023;
+        String codigoEstudiante = "C12345";
+        String nombreCompleto = "Juan Perez";
+
+        IdentificacionEstudianteProjection projection = mock(IdentificacionEstudianteProjection.class);
+        when(projection.getCodigoEstudiante()).thenReturn(codigoEstudiante);
+        when(projection.getNombreCompleto()).thenReturn(nombreCompleto);
+
+        Convocatoria convocatoria = new Convocatoria();
+        convocatoria.setMes(Mes.ENERO);
+
+        Curso curso = new Curso();
+        curso.setNombre("Java Basics");
+
+        Seccion seccion = new Seccion();
+        seccion.setCurso(curso);
+
+        Matricula matricula = new Matricula();
+        matricula.setFechaMatricula(java.time.Instant.now());
+        matricula.setSeccion(seccion);
+        matricula.setNota(18.0);
+
+        Postulacion postulacion = new Postulacion();
+        postulacion.setConvocatoria(convocatoria);
+        postulacion.setFechaPostulacion(java.time.LocalDate.now());
+        postulacion.setPromedioGeneral(15.0);
+        postulacion.setAceptado(true);
+        postulacion.setCursos(Set.of(curso));
+        postulacion.setMatriculas(List.of(matricula));
+
+        when(estudianteRepository.findDatosEstudiante(idEstudiante)).thenReturn(Optional.of(projection));
+        when(postulacionRepository.findByYearWithMatricula(idEstudiante, year, EstadoMatricula.ACEPTADO))
+                .thenReturn(List.of(postulacion));
+
+        // Act
+        DetallePostulanteResponse response = postulacionService.getPostulacionesEstudiante(idEstudiante, year);
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getIdEstudiante()).isEqualTo(idEstudiante);
+        assertThat(response.getCodigoEstudiante()).isEqualTo(codigoEstudiante);
+        assertThat(response.getNombreCompleto()).isEqualTo(nombreCompleto);
+        assertThat(response.getPostulaciones()).hasSize(1);
+
+        ResultadoPostulacionResponse resultado = response.getPostulaciones().get(0);
+        assertThat(resultado.getPostulacion().getMesConvocatoria()).isEqualTo("ENERO");
+        assertThat(resultado.getMatricula().getCursoMatriculado()).isEqualTo("Java Basics");
+    }
+
+    @Test
+    void getPostulacionesEstudiante_ShouldThrowNotFound_WhenStudentDoesNotExist() {
+        // Arrange
+        UUID idEstudiante = UUID.randomUUID();
+        Integer year = 2023;
+
+        when(estudianteRepository.findDatosEstudiante(idEstudiante)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThatThrownBy(() -> postulacionService.getPostulacionesEstudiante(idEstudiante, year))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessage("No existe estudiante con el ID ingresado");
+
+        verify(postulacionRepository, times(0)).findByYearWithMatricula(any(), any(), any());
+    }
+
+    @Test
+    void getPostulacionesEstudiante_ShouldReturnEmptyList_WhenStudentHasNoPostulaciones() {
+        // Arrange
+        UUID idEstudiante = UUID.randomUUID();
+        Integer year = 2023;
+        String codigoEstudiante = "C12345";
+        String nombreCompleto = "Juan Perez";
+
+        IdentificacionEstudianteProjection projection = mock(IdentificacionEstudianteProjection.class);
+        when(projection.getCodigoEstudiante()).thenReturn(codigoEstudiante);
+        when(projection.getNombreCompleto()).thenReturn(nombreCompleto);
+
+        when(estudianteRepository.findDatosEstudiante(idEstudiante)).thenReturn(Optional.of(projection));
+        when(postulacionRepository.findByYearWithMatricula(idEstudiante, year, EstadoMatricula.ACEPTADO))
+                .thenReturn(Collections.emptyList());
+
+        // Act
+        DetallePostulanteResponse response = postulacionService.getPostulacionesEstudiante(idEstudiante, year);
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getIdEstudiante()).isEqualTo(idEstudiante);
+        assertThat(response.getPostulaciones()).isNotNull().isEmpty();
     }
 }
