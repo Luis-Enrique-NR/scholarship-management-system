@@ -17,12 +17,12 @@ import pe.com.security.scholarship.config.ResourceServerTest;
 import pe.com.security.scholarship.domain.enums.EstadoConvocatoria;
 import pe.com.security.scholarship.domain.enums.Mes;
 import pe.com.security.scholarship.domain.enums.ModoEvaluacion;
-import pe.com.security.scholarship.dto.projection.PostulanteConvocatoriaProjection;
 import pe.com.security.scholarship.dto.request.RegisterConvocatoriaRequest;
 import pe.com.security.scholarship.dto.request.UpdateEstadoConvocatoriaRequest;
 import pe.com.security.scholarship.dto.response.ConvocatoriaAbiertaResponse;
 import pe.com.security.scholarship.dto.response.DetalleConvocatoriaResponse;
 import pe.com.security.scholarship.dto.response.HistorialConvocatoriaResponse;
+import pe.com.security.scholarship.dto.response.PostulanteConvocatoriaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredConvocatoriaResponse;
 import pe.com.security.scholarship.exception.BadRequestException;
 import pe.com.security.scholarship.exception.NotFoundException;
@@ -35,8 +35,6 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -335,52 +333,22 @@ class ConvocatoriaControllerTest {
         verify(convocatoriaService, times(0)).actualizarEstadoConvocatoria(any(UpdateEstadoConvocatoriaRequest.class));
     }
 
-    // Esta clase representa la estructura de la proyección que Jackson necesita
-    static class PostulanteProjectionDTO implements PostulanteConvocatoriaProjection {
-        public UUID idEstudiante;
-        public String codigo;
-        public String nombreCompleto;
-        public Boolean becado;
-        public Double promedioGeneral;
-        public LocalDate fechaPostulacion;
-
-        public PostulanteProjectionDTO(UUID idEstudiante, String codigo, String nombreCompleto, Boolean becado, Double promedioGeneral, LocalDate fechaPostulacion) {
-            this.idEstudiante = idEstudiante;
-            this.codigo = codigo;
-            this.nombreCompleto = nombreCompleto;
-            this.becado = becado;
-            this.promedioGeneral = promedioGeneral;
-            this.fechaPostulacion = fechaPostulacion;
-        }
-
-        // --- IMPLEMENTA LOS MÉTODOS DE LA INTERFAZ ---
-        @Override public UUID getIdEstudiante() { return idEstudiante; }
-        @Override public String getCodigo() { return codigo; }
-        @Override public String getNombreCompleto() { return nombreCompleto; }
-        @Override public Boolean getBecado() { return becado; }
-        @Override public Double getPromedioGeneral() { return promedioGeneral; }
-        @Override public LocalDate getFechaPostulacion() { return fechaPostulacion; }
-    }
-
     @Test
     void listarPostulantes_Exitoso() throws Exception {
         // Arrange
         Integer idConvocatoria = 1;
 
-        // 1. Crear el objeto DTO normal (implementa la interfaz)
-        PostulanteProjectionDTO dto = new PostulanteProjectionDTO(
-                UUID.randomUUID(),
-                "STU001",
-                "Juan Perez",
-                true,
-                18.5,
-                LocalDate.now()
-        );
+        PostulanteConvocatoriaResponse response = PostulanteConvocatoriaResponse.builder()
+                .idEstudiante(UUID.randomUUID())
+                .codigo("STU001")
+                .nombreCompleto("Juan Perez")
+                .becado(true)
+                .promedioGeneral(18.5)
+                .fechaPostulacion(LocalDate.now())
+                .build();
 
-        // 2. Crear la página con el DTO (¡sin cast raro!)
-        Page<PostulanteConvocatoriaProjection> pageResponse = new PageImpl<>(List.of(dto));
+        Page<PostulanteConvocatoriaResponse> pageResponse = new PageImpl<>(List.of(response));
 
-        // 3. Mockear el servicio
         when(postulacionService.obtenerPostulantesConvocatoria(eq(idConvocatoria), any(Pageable.class)))
                 .thenReturn(pageResponse);
 

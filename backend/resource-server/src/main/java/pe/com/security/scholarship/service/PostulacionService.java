@@ -19,6 +19,7 @@ import pe.com.security.scholarship.dto.response.ConsultaPostulacionResponse;
 import pe.com.security.scholarship.dto.response.CursoPostulacionResponse;
 import pe.com.security.scholarship.dto.response.DetallePostulanteResponse;
 import pe.com.security.scholarship.dto.response.HistorialPostulacionResponse;
+import pe.com.security.scholarship.dto.response.PostulanteConvocatoriaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredPostulacionResponse;
 import pe.com.security.scholarship.dto.response.ResultadoPostulacionResponse;
 import pe.com.security.scholarship.exception.BadRequestException;
@@ -125,7 +126,7 @@ public class PostulacionService {
 
   // Obtener la lista de postulantes por convocatoria
   @Transactional(readOnly = true)
-  public Page<PostulanteConvocatoriaProjection> obtenerPostulantesConvocatoria(Integer idConvocatoria, Pageable pageable) {
+  public Page<PostulanteConvocatoriaResponse> obtenerPostulantesConvocatoria(Integer idConvocatoria, Pageable pageable) {
     List<String> camposPermitidos = List.of("fechaPostulacion", "promedioGeneral", "becado");
 
     List<Sort.Order> ordenesConNulosAlFinal = pageable.getSort().stream()
@@ -144,7 +145,8 @@ public class PostulacionService {
             Sort.by(ordenesConNulosAlFinal)
     );
 
-    return postulacionRepository.buscarPostulantesConvocatoria(idConvocatoria, pageableAjustado);
+    return postulacionRepository.buscarPostulantesConvocatoria(idConvocatoria, pageableAjustado)
+            .map(PostulacionMapper::mapPostulanteConvocatoria);
   }
 
   // Obtener el detalle de postulaciones del presente año para un estudiante específico

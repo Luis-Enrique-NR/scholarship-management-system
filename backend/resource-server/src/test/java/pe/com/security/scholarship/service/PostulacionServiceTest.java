@@ -29,6 +29,7 @@ import pe.com.security.scholarship.dto.request.RegisterPostulacionRequest;
 import pe.com.security.scholarship.dto.response.ConsultaPostulacionResponse;
 import pe.com.security.scholarship.dto.response.DetallePostulanteResponse;
 import pe.com.security.scholarship.dto.response.HistorialPostulacionResponse;
+import pe.com.security.scholarship.dto.response.PostulanteConvocatoriaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredPostulacionResponse;
 import pe.com.security.scholarship.dto.response.ResultadoPostulacionResponse;
 import pe.com.security.scholarship.exception.BadRequestException;
@@ -40,6 +41,7 @@ import pe.com.security.scholarship.repository.MatriculaRepository;
 import pe.com.security.scholarship.repository.PostulacionRepository;
 import pe.com.security.scholarship.util.SecurityUtils;
 
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -488,18 +490,33 @@ class PostulacionServiceTest {
         // Arrange
         Integer idConvocatoria = 1;
         Pageable pageable = PageRequest.of(0, 10, Sort.by("promedioGeneral"));
+        
+        // Mock de la proyección
         PostulanteConvocatoriaProjection projection = mock(PostulanteConvocatoriaProjection.class);
+        when(projection.getIdEstudiante()).thenReturn(UUID.randomUUID());
+        when(projection.getCodigo()).thenReturn("STU001");
+        when(projection.getNombreCompleto()).thenReturn("Juan Perez");
+        when(projection.getBecado()).thenReturn(true);
+        when(projection.getPromedioGeneral()).thenReturn(18.5);
+        when(projection.getFechaPostulacion()).thenReturn(LocalDate.now());
+
         Page<PostulanteConvocatoriaProjection> page = new PageImpl<>(List.of(projection));
 
         when(postulacionRepository.buscarPostulantesConvocatoria(eq(idConvocatoria), any(Pageable.class)))
                 .thenReturn(page);
 
         // Act
-        Page<PostulanteConvocatoriaProjection> result = postulacionService.obtenerPostulantesConvocatoria(idConvocatoria, pageable);
+        Page<PostulanteConvocatoriaResponse> result = postulacionService.obtenerPostulantesConvocatoria(idConvocatoria, pageable);
 
         // Assert
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(1);
+        
+        PostulanteConvocatoriaResponse response = result.getContent().get(0);
+        assertThat(response.getNombreCompleto()).isEqualTo("Juan Perez");
+        assertThat(response.getCodigo()).isEqualTo("STU001");
+        assertThat(response.getBecado()).isTrue();
+        assertThat(response.getPromedioGeneral()).isEqualTo(18.5);
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
         verify(postulacionRepository).buscarPostulantesConvocatoria(eq(idConvocatoria), pageableCaptor.capture());

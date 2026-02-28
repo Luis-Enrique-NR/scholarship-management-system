@@ -6,12 +6,14 @@ import pe.com.security.scholarship.domain.entity.Estudiante;
 import pe.com.security.scholarship.domain.entity.Matricula;
 import pe.com.security.scholarship.domain.entity.Postulacion;
 import pe.com.security.scholarship.dto.projection.IdentificacionEstudianteProjection;
+import pe.com.security.scholarship.dto.projection.PostulanteConvocatoriaProjection;
 import pe.com.security.scholarship.dto.response.ConsultaPostulacionResponse;
 import pe.com.security.scholarship.dto.response.CursoPostulacionResponse;
 import pe.com.security.scholarship.dto.response.DetallePostulanteResponse;
 import pe.com.security.scholarship.dto.response.HistorialPostulacionResponse;
 import pe.com.security.scholarship.dto.response.InformacionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.InformacionPostulacionResponse;
+import pe.com.security.scholarship.dto.response.PostulanteConvocatoriaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredPostulacionResponse;
 import pe.com.security.scholarship.dto.response.ResultadoPostulacionResponse;
 
@@ -59,6 +61,17 @@ public class PostulacionMapper {
             .estado(getEstadoPostulacion(postulacion))
             .fechaPostulacion(postulacion.getFechaPostulacion())
             .mesConvocatoria(postulacion.getConvocatoria().getMes().name())
+            .build();
+  }
+
+  public static PostulanteConvocatoriaResponse mapPostulanteConvocatoria(PostulanteConvocatoriaProjection projection) {
+    return PostulanteConvocatoriaResponse.builder()
+            .idEstudiante(projection.getIdEstudiante())
+            .codigo(projection.getCodigo())
+            .nombreCompleto(projection.getNombreCompleto())
+            .becado(projection.getBecado())
+            .promedioGeneral(projection.getPromedioGeneral())
+            .fechaPostulacion(projection.getFechaPostulacion())
             .build();
   }
 

@@ -19,12 +19,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import pe.com.security.scholarship.dto.projection.PostulanteConvocatoriaProjection;
 import pe.com.security.scholarship.dto.request.RegisterConvocatoriaRequest;
 import pe.com.security.scholarship.dto.request.UpdateEstadoConvocatoriaRequest;
 import pe.com.security.scholarship.dto.response.ConvocatoriaAbiertaResponse;
 import pe.com.security.scholarship.dto.response.DetalleConvocatoriaResponse;
 import pe.com.security.scholarship.dto.response.HistorialConvocatoriaResponse;
+import pe.com.security.scholarship.dto.response.PostulanteConvocatoriaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredConvocatoriaResponse;
 import pe.com.security.scholarship.service.ConvocatoriaService;
 import pe.com.security.scholarship.service.PostulacionService;
@@ -91,11 +91,11 @@ public class ConvocatoriaController {
   @GetMapping("/{id}/postulantes")
   @PreAuthorize("hasRole('SOCIAL_OUTREACH_SECRETARY') or hasRole('SOCIAL_OUTREACH_MANAGER')")
   @Operation(summary = "Consultar lista de postulantes", description = "Obtener la relación de postulantes que participaron en una convocatoria")
-  public ResponseEntity<ApiResponse<Page<PostulanteConvocatoriaProjection>>> listarPostulantes(
+  public ResponseEntity<ApiResponse<Page<PostulanteConvocatoriaResponse>>> listarPostulantes(
           @PathVariable Integer id,
           @ParameterObject @PageableDefault(size = 20, sort = "fechaPostulacion", direction = Sort.Direction.DESC) Pageable pageable
   ) {
-    Page<PostulanteConvocatoriaProjection> response = postulacionService.obtenerPostulantesConvocatoria(id, pageable);
+    Page<PostulanteConvocatoriaResponse> response = postulacionService.obtenerPostulantesConvocatoria(id, pageable);
     return ResponseEntity.ok(new ApiResponse<>("Consulta exitosa", "200", response));
   }
 }
