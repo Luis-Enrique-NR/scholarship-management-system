@@ -3,10 +3,16 @@ package pe.com.security.scholarship.service;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import pe.com.security.scholarship.domain.entity.Convocatoria;
 import pe.com.security.scholarship.domain.entity.Curso;
 import pe.com.security.scholarship.domain.entity.Estudiante;
@@ -14,6 +20,7 @@ import pe.com.security.scholarship.domain.entity.Postulacion;
 import pe.com.security.scholarship.domain.enums.EstadoConvocatoria;
 import pe.com.security.scholarship.domain.enums.Mes;
 import pe.com.security.scholarship.domain.enums.ModalidadCurso;
+import pe.com.security.scholarship.dto.projection.PostulanteConvocatoriaProjection;
 import pe.com.security.scholarship.dto.request.RegisterPostulacionRequest;
 import pe.com.security.scholarship.dto.response.ConsultaPostulacionResponse;
 import pe.com.security.scholarship.dto.response.HistorialPostulacionResponse;
@@ -36,9 +43,12 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -465,5 +475,46 @@ class PostulacionServiceTest {
                     .isInstanceOf(NotFoundException.class)
                     .hasMessage("No se encontró estudiante asociado al id del payload");
         }
+    }
+
+    @Test
+    void obtenerPostulantesConvocatoria_ShouldReturnPage_WhenSortIsValid() {
+        // Arrange
+        Integer idConvocatoria = 1;
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("promedioGeneral"));
+        PostulanteConvocatoriaProjection projection = mock(PostulanteConvocatoriaProjection.class);
+        Page<PostulanteConvocatoriaProjection> page = new PageImpl<>(List.of(projection));
+
+        when(postulacionRepository.buscarPostulantesConvocatoria(eq(idConvocatoria), any(Pageable.class)))
+                .thenReturn(page);
+
+        // Act
+        Page<PostulanteConvocatoriaProjection> result = postulacionService.obtenerPostulantesConvocatoria(idConvocatoria, pageable);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).hasSize(1);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(postulacionRepository).buscarPostulantesConvocatoria(eq(idConvocatoria), pageableCaptor.capture());
+
+        Pageable capturedPageable = pageableCaptor.getValue();
+        Sort.Order order = capturedPageable.getSort().getOrderFor("promedioGeneral");
+        assertThat(order).isNotNull();
+        assertThat(order.getNullHandling()).isEqualTo(Sort.NullHandling.NULLS_LAST);
+    }
+
+    @Test
+    void obtenerPostulantesConvocatoria_ShouldThrowBadRequest_WhenSortIsInvalid() {
+        // Arrange
+        Integer idConvocatoria = 1;
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("contraseña"));
+
+        // Act & Assert
+        assertThatThrownBy(() -> postulacionService.obtenerPostulantesConvocatoria(idConvocatoria, pageable))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("No se puede ordenar por el campo: contraseña");
+
+        verifyNoInteractions(postulacionRepository);
     }
 }

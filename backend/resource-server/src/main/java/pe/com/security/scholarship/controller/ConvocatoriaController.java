@@ -4,6 +4,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import pe.com.security.scholarship.dto.projection.PostulanteConvocatoriaProjection;
 import pe.com.security.scholarship.dto.request.RegisterConvocatoriaRequest;
 import pe.com.security.scholarship.dto.request.UpdateEstadoConvocatoriaRequest;
 import pe.com.security.scholarship.dto.response.ConvocatoriaAbiertaResponse;
@@ -21,6 +27,7 @@ import pe.com.security.scholarship.dto.response.DetalleConvocatoriaResponse;
 import pe.com.security.scholarship.dto.response.HistorialConvocatoriaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredConvocatoriaResponse;
 import pe.com.security.scholarship.service.ConvocatoriaService;
+import pe.com.security.scholarship.service.PostulacionService;
 import pe.com.security.scholarship.util.ApiResponse;
 
 import java.util.List;
@@ -32,6 +39,7 @@ import java.util.List;
 public class ConvocatoriaController {
 
   private final ConvocatoriaService convocatoriaService;
+  private final PostulacionService postulacionService;
 
   @PostMapping
   @PreAuthorize("hasRole('SOCIAL_OUTREACH_SECRETARY') or hasRole('SOCIAL_OUTREACH_MANAGER')")
@@ -78,5 +86,16 @@ public class ConvocatoriaController {
   ) {
     DetalleConvocatoriaResponse response = convocatoriaService.actualizarEstadoConvocatoria(request);
     return ResponseEntity.ok(new ApiResponse<>("Actualización exitosa", "200", response));
+  }
+
+  @GetMapping("/{id}/postulantes")
+  @PreAuthorize("hasRole('SOCIAL_OUTREACH_SECRETARY') or hasRole('SOCIAL_OUTREACH_MANAGER')")
+  @Operation(summary = "Consultar lista de postulantes", description = "Obtener la relación de postulantes que participaron en una convocatoria")
+  public ResponseEntity<ApiResponse<Page<PostulanteConvocatoriaProjection>>> listarPostulantes(
+          @PathVariable Integer id,
+          @ParameterObject @PageableDefault(size = 20, sort = "fechaPostulacion", direction = Sort.Direction.DESC) Pageable pageable
+  ) {
+    Page<PostulanteConvocatoriaProjection> response = postulacionService.obtenerPostulantesConvocatoria(id, pageable);
+    return ResponseEntity.ok(new ApiResponse<>("Consulta exitosa", "200", response));
   }
 }

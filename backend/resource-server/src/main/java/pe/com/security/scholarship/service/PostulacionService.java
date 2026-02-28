@@ -1,12 +1,17 @@
 package pe.com.security.scholarship.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.com.security.scholarship.domain.entity.Convocatoria;
 import pe.com.security.scholarship.domain.entity.Curso;
 import pe.com.security.scholarship.domain.entity.Estudiante;
 import pe.com.security.scholarship.domain.entity.Postulacion;
+import pe.com.security.scholarship.dto.projection.PostulanteConvocatoriaProjection;
 import pe.com.security.scholarship.dto.request.RegisterPostulacionRequest;
 import pe.com.security.scholarship.dto.response.ConsultaPostulacionResponse;
 import pe.com.security.scholarship.dto.response.CursoPostulacionResponse;
@@ -112,5 +117,29 @@ public class PostulacionService {
 
     // Menos de 3 meses?
     return postulacionRepository.cantidadMesesBeca(idEstudiante)<=3;
+  }
+
+  // Obtener la lista de postulantes por convocatoria
+  @Transactional(readOnly = true)
+  public Page<PostulanteConvocatoriaProjection> obtenerPostulantesConvocatoria(Integer idConvocatoria, Pageable pageable) {
+    List<String> camposPermitidos = List.of("fechaPostulacion", "promedioGeneral", "becado");
+
+    List<Sort.Order> ordenesConNulosAlFinal = pageable.getSort().stream()
+            .map(order -> {
+              if (!camposPermitidos.contains(order.getProperty())) {
+                throw new BadRequestException("No se puede ordenar por el campo: " + order.getProperty());
+              }
+              // Forzar NULLS LAST para cada criterio
+              return order.with(Sort.NullHandling.NULLS_LAST);
+            })
+            .toList();
+
+    Pageable pageableAjustado = PageRequest.of(
+            pageable.getPageNumber(),
+            pageable.getPageSize(),
+            Sort.by(ordenesConNulosAlFinal)
+    );
+
+    return postulacionRepository.buscarPostulantesConvocatoria(idConvocatoria, pageableAjustado);
   }
 }
