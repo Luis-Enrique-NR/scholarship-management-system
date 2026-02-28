@@ -1,17 +1,27 @@
 package pe.com.security.scholarship.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.com.security.scholarship.domain.entity.Convocatoria;
 import pe.com.security.scholarship.domain.entity.Curso;
 import pe.com.security.scholarship.domain.entity.Estudiante;
 import pe.com.security.scholarship.domain.entity.Postulacion;
+import pe.com.security.scholarship.domain.enums.EstadoMatricula;
+import pe.com.security.scholarship.dto.projection.IdentificacionEstudianteProjection;
+import pe.com.security.scholarship.dto.projection.PostulanteConvocatoriaProjection;
 import pe.com.security.scholarship.dto.request.RegisterPostulacionRequest;
 import pe.com.security.scholarship.dto.response.ConsultaPostulacionResponse;
 import pe.com.security.scholarship.dto.response.CursoPostulacionResponse;
+import pe.com.security.scholarship.dto.response.DetallePostulanteResponse;
 import pe.com.security.scholarship.dto.response.HistorialPostulacionResponse;
+import pe.com.security.scholarship.dto.response.PostulanteConvocatoriaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredPostulacionResponse;
+import pe.com.security.scholarship.dto.response.ResultadoPostulacionResponse;
 import pe.com.security.scholarship.exception.BadRequestException;
 import pe.com.security.scholarship.exception.NotFoundException;
 import pe.com.security.scholarship.mapper.CursoMapper;
@@ -112,5 +122,49 @@ public class PostulacionService {
 
     // Menos de 3 meses?
     return postulacionRepository.cantidadMesesBeca(idEstudiante)<=3;
+  }
+
+  // Obtener la lista de postulantes por convocatoria
+  @Transactional(readOnly = true)
+  public Page<PostulanteConvocatoriaResponse> obtenerPostulantesConvocatoria(Integer idConvocatoria, Pageable pageable) {
+    List<String> camposPermitidos = List.of("fechaPostulacion", "promedioGeneral", "becado");
+
+    List<Sort.Order> ordenesConNulosAlFinal = pageable.getSort().stream()
+            .map(order -> {
+              if (!camposPermitidos.contains(order.getProperty())) {
+                throw new BadRequestException("No se puede ordenar por el campo: " + order.getProperty());
+              }
+              // Forzar NULLS LAST para cada criterio
+              return order.with(Sort.NullHandling.NULLS_LAST);
+            })
+            .toList();
+
+    Pageable pageableAjustado = PageRequest.of(
+            pageable.getPageNumber(),
+            pageable.getPageSize(),
+            Sort.by(ordenesConNulosAlFinal)
+    );
+
+    return postulacionRepository.buscarPostulantesConvocatoria(idConvocatoria, pageableAjustado)
+            .map(PostulacionMapper::mapPostulanteConvocatoria);
+  }
+
+  // Obtener el detalle de postulaciones del presente año para un estudiante específico
+  @Transactional(readOnly = true)
+  public DetallePostulanteResponse getPostulacionesEstudiante(UUID idEstudiante, Integer year) {
+
+    IdentificacionEstudianteProjection estudiante = estudianteRepository.findDatosEstudiante(idEstudiante)
+            .orElseThrow(() -> new NotFoundException("No existe estudiante con el ID ingresado"));
+
+    List<Postulacion> postulacionesList = postulacionRepository.findByYearWithMatricula(idEstudiante, year, EstadoMatricula.ACEPTADO);
+
+    List<ResultadoPostulacionResponse> resultados = postulacionesList.stream()
+            .map(p -> ResultadoPostulacionResponse.builder()
+                    .postulacion(PostulacionMapper.mapInfoPostulacion(p))
+                    .matricula(p.getMatriculas().isEmpty() ? null : PostulacionMapper.mapInfoMatricula(p.getMatriculas().getFirst()))
+                    .build())
+            .toList();
+
+    return PostulacionMapper.mapDetallePostulante(idEstudiante, estudiante, resultados);
   }
 }

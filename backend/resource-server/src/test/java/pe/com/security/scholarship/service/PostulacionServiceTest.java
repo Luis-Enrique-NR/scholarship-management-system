@@ -3,21 +3,35 @@ package pe.com.security.scholarship.service;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import pe.com.security.scholarship.domain.entity.Convocatoria;
 import pe.com.security.scholarship.domain.entity.Curso;
 import pe.com.security.scholarship.domain.entity.Estudiante;
+import pe.com.security.scholarship.domain.entity.Matricula;
 import pe.com.security.scholarship.domain.entity.Postulacion;
+import pe.com.security.scholarship.domain.entity.Seccion;
 import pe.com.security.scholarship.domain.enums.EstadoConvocatoria;
+import pe.com.security.scholarship.domain.enums.EstadoMatricula;
 import pe.com.security.scholarship.domain.enums.Mes;
 import pe.com.security.scholarship.domain.enums.ModalidadCurso;
+import pe.com.security.scholarship.dto.projection.IdentificacionEstudianteProjection;
+import pe.com.security.scholarship.dto.projection.PostulanteConvocatoriaProjection;
 import pe.com.security.scholarship.dto.request.RegisterPostulacionRequest;
 import pe.com.security.scholarship.dto.response.ConsultaPostulacionResponse;
+import pe.com.security.scholarship.dto.response.DetallePostulanteResponse;
 import pe.com.security.scholarship.dto.response.HistorialPostulacionResponse;
+import pe.com.security.scholarship.dto.response.PostulanteConvocatoriaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredPostulacionResponse;
+import pe.com.security.scholarship.dto.response.ResultadoPostulacionResponse;
 import pe.com.security.scholarship.exception.BadRequestException;
 import pe.com.security.scholarship.exception.NotFoundException;
 import pe.com.security.scholarship.repository.ConvocatoriaRepository;
@@ -27,6 +41,7 @@ import pe.com.security.scholarship.repository.MatriculaRepository;
 import pe.com.security.scholarship.repository.PostulacionRepository;
 import pe.com.security.scholarship.util.SecurityUtils;
 
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -36,9 +51,12 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -465,5 +483,155 @@ class PostulacionServiceTest {
                     .isInstanceOf(NotFoundException.class)
                     .hasMessage("No se encontró estudiante asociado al id del payload");
         }
+    }
+
+    @Test
+    void obtenerPostulantesConvocatoria_ShouldReturnPage_WhenSortIsValid() {
+        // Arrange
+        Integer idConvocatoria = 1;
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("promedioGeneral"));
+        
+        // Mock de la proyección
+        PostulanteConvocatoriaProjection projection = mock(PostulanteConvocatoriaProjection.class);
+        when(projection.getIdEstudiante()).thenReturn(UUID.randomUUID());
+        when(projection.getCodigo()).thenReturn("STU001");
+        when(projection.getNombreCompleto()).thenReturn("Juan Perez");
+        when(projection.getBecado()).thenReturn(true);
+        when(projection.getPromedioGeneral()).thenReturn(18.5);
+        when(projection.getFechaPostulacion()).thenReturn(LocalDate.now());
+
+        Page<PostulanteConvocatoriaProjection> page = new PageImpl<>(List.of(projection));
+
+        when(postulacionRepository.buscarPostulantesConvocatoria(eq(idConvocatoria), any(Pageable.class)))
+                .thenReturn(page);
+
+        // Act
+        Page<PostulanteConvocatoriaResponse> result = postulacionService.obtenerPostulantesConvocatoria(idConvocatoria, pageable);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).hasSize(1);
+        
+        PostulanteConvocatoriaResponse response = result.getContent().get(0);
+        assertThat(response.getNombreCompleto()).isEqualTo("Juan Perez");
+        assertThat(response.getCodigo()).isEqualTo("STU001");
+        assertThat(response.getBecado()).isTrue();
+        assertThat(response.getPromedioGeneral()).isEqualTo(18.5);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(postulacionRepository).buscarPostulantesConvocatoria(eq(idConvocatoria), pageableCaptor.capture());
+
+        Pageable capturedPageable = pageableCaptor.getValue();
+        Sort.Order order = capturedPageable.getSort().getOrderFor("promedioGeneral");
+        assertThat(order).isNotNull();
+        assertThat(order.getNullHandling()).isEqualTo(Sort.NullHandling.NULLS_LAST);
+    }
+
+    @Test
+    void obtenerPostulantesConvocatoria_ShouldThrowBadRequest_WhenSortIsInvalid() {
+        // Arrange
+        Integer idConvocatoria = 1;
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("contraseña"));
+
+        // Act & Assert
+        assertThatThrownBy(() -> postulacionService.obtenerPostulantesConvocatoria(idConvocatoria, pageable))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("No se puede ordenar por el campo: contraseña");
+
+        verifyNoInteractions(postulacionRepository);
+    }
+
+    @Test
+    void getPostulacionesEstudiante_ShouldReturnResponse_WhenStudentExistsAndHasPostulaciones() {
+        // Arrange
+        UUID idEstudiante = UUID.randomUUID();
+        Integer year = 2023;
+        String codigoEstudiante = "C12345";
+        String nombreCompleto = "Juan Perez";
+
+        IdentificacionEstudianteProjection projection = mock(IdentificacionEstudianteProjection.class);
+        when(projection.getCodigoEstudiante()).thenReturn(codigoEstudiante);
+        when(projection.getNombreCompleto()).thenReturn(nombreCompleto);
+
+        Convocatoria convocatoria = new Convocatoria();
+        convocatoria.setMes(Mes.ENERO);
+
+        Curso curso = new Curso();
+        curso.setNombre("Java Basics");
+
+        Seccion seccion = new Seccion();
+        seccion.setCurso(curso);
+
+        Matricula matricula = new Matricula();
+        matricula.setFechaMatricula(java.time.Instant.now());
+        matricula.setSeccion(seccion);
+        matricula.setNota(18.0);
+
+        Postulacion postulacion = new Postulacion();
+        postulacion.setConvocatoria(convocatoria);
+        postulacion.setFechaPostulacion(java.time.LocalDate.now());
+        postulacion.setPromedioGeneral(15.0);
+        postulacion.setAceptado(true);
+        postulacion.setCursos(Set.of(curso));
+        postulacion.setMatriculas(List.of(matricula));
+
+        when(estudianteRepository.findDatosEstudiante(idEstudiante)).thenReturn(Optional.of(projection));
+        when(postulacionRepository.findByYearWithMatricula(idEstudiante, year, EstadoMatricula.ACEPTADO))
+                .thenReturn(List.of(postulacion));
+
+        // Act
+        DetallePostulanteResponse response = postulacionService.getPostulacionesEstudiante(idEstudiante, year);
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getIdEstudiante()).isEqualTo(idEstudiante);
+        assertThat(response.getCodigoEstudiante()).isEqualTo(codigoEstudiante);
+        assertThat(response.getNombreCompleto()).isEqualTo(nombreCompleto);
+        assertThat(response.getPostulaciones()).hasSize(1);
+
+        ResultadoPostulacionResponse resultado = response.getPostulaciones().get(0);
+        assertThat(resultado.getPostulacion().getMesConvocatoria()).isEqualTo("ENERO");
+        assertThat(resultado.getMatricula().getCursoMatriculado()).isEqualTo("Java Basics");
+    }
+
+    @Test
+    void getPostulacionesEstudiante_ShouldThrowNotFound_WhenStudentDoesNotExist() {
+        // Arrange
+        UUID idEstudiante = UUID.randomUUID();
+        Integer year = 2023;
+
+        when(estudianteRepository.findDatosEstudiante(idEstudiante)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThatThrownBy(() -> postulacionService.getPostulacionesEstudiante(idEstudiante, year))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessage("No existe estudiante con el ID ingresado");
+
+        verify(postulacionRepository, times(0)).findByYearWithMatricula(any(), any(), any());
+    }
+
+    @Test
+    void getPostulacionesEstudiante_ShouldReturnEmptyList_WhenStudentHasNoPostulaciones() {
+        // Arrange
+        UUID idEstudiante = UUID.randomUUID();
+        Integer year = 2023;
+        String codigoEstudiante = "C12345";
+        String nombreCompleto = "Juan Perez";
+
+        IdentificacionEstudianteProjection projection = mock(IdentificacionEstudianteProjection.class);
+        when(projection.getCodigoEstudiante()).thenReturn(codigoEstudiante);
+        when(projection.getNombreCompleto()).thenReturn(nombreCompleto);
+
+        when(estudianteRepository.findDatosEstudiante(idEstudiante)).thenReturn(Optional.of(projection));
+        when(postulacionRepository.findByYearWithMatricula(idEstudiante, year, EstadoMatricula.ACEPTADO))
+                .thenReturn(Collections.emptyList());
+
+        // Act
+        DetallePostulanteResponse response = postulacionService.getPostulacionesEstudiante(idEstudiante, year);
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getIdEstudiante()).isEqualTo(idEstudiante);
+        assertThat(response.getPostulaciones()).isNotNull().isEmpty();
     }
 }

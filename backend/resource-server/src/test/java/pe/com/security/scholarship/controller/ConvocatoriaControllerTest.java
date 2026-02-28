@@ -3,7 +3,12 @@ package pe.com.security.scholarship.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.data.autoconfigure.web.DataWebAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -17,14 +22,19 @@ import pe.com.security.scholarship.dto.request.UpdateEstadoConvocatoriaRequest;
 import pe.com.security.scholarship.dto.response.ConvocatoriaAbiertaResponse;
 import pe.com.security.scholarship.dto.response.DetalleConvocatoriaResponse;
 import pe.com.security.scholarship.dto.response.HistorialConvocatoriaResponse;
+import pe.com.security.scholarship.dto.response.PostulanteConvocatoriaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredConvocatoriaResponse;
+import pe.com.security.scholarship.exception.BadRequestException;
 import pe.com.security.scholarship.exception.NotFoundException;
 import pe.com.security.scholarship.service.ConvocatoriaService;
+import pe.com.security.scholarship.service.PostulacionService;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -38,6 +48,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(ConvocatoriaController.class)
 @ResourceServerTest
+@Import(DataWebAutoConfiguration.class)
 class ConvocatoriaControllerTest {
 
     @Autowired
@@ -45,6 +56,9 @@ class ConvocatoriaControllerTest {
 
     @MockitoBean
     private ConvocatoriaService convocatoriaService;
+
+    @MockitoBean
+    private PostulacionService postulacionService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -317,5 +331,68 @@ class ConvocatoriaControllerTest {
                 .andExpect(status().isBadRequest());
 
         verify(convocatoriaService, times(0)).actualizarEstadoConvocatoria(any(UpdateEstadoConvocatoriaRequest.class));
+    }
+
+    @Test
+    void listarPostulantes_Exitoso() throws Exception {
+        // Arrange
+        Integer idConvocatoria = 1;
+
+        PostulanteConvocatoriaResponse response = PostulanteConvocatoriaResponse.builder()
+                .idEstudiante(UUID.randomUUID())
+                .codigo("STU001")
+                .nombreCompleto("Juan Perez")
+                .becado(true)
+                .promedioGeneral(18.5)
+                .fechaPostulacion(LocalDate.now())
+                .build();
+
+        Page<PostulanteConvocatoriaResponse> pageResponse = new PageImpl<>(List.of(response));
+
+        when(postulacionService.obtenerPostulantesConvocatoria(eq(idConvocatoria), any(Pageable.class)))
+                .thenReturn(pageResponse);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/convocatorias/{id}/postulantes", idConvocatoria)
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_SOCIAL_OUTREACH_MANAGER")))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Consulta exitosa"))
+                .andExpect(jsonPath("$.data.content[0].nombreCompleto").value("Juan Perez"));
+
+        verify(postulacionService).obtenerPostulantesConvocatoria(eq(idConvocatoria), any(Pageable.class));
+    }
+
+    @Test
+    void listarPostulantes_Forbidden() throws Exception {
+        // Arrange
+        Integer idConvocatoria = 1;
+
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/convocatorias/{id}/postulantes", idConvocatoria)
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_STUDENT")))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden());
+
+        verify(postulacionService, times(0)).obtenerPostulantesConvocatoria(any(), any());
+    }
+
+    @Test
+    void listarPostulantes_BadRequest_OrdenInvalido() throws Exception {
+        // Arrange
+        Integer idConvocatoria = 1;
+        String invalidSort = "contraseña";
+
+        when(postulacionService.obtenerPostulantesConvocatoria(eq(idConvocatoria), any(Pageable.class)))
+                .thenThrow(new BadRequestException("No se puede ordenar por el campo: " + invalidSort));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/convocatorias/{id}/postulantes", idConvocatoria)
+                        .param("sort", invalidSort)
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_SOCIAL_OUTREACH_MANAGER")))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+
+        verify(postulacionService, times(1)).obtenerPostulantesConvocatoria(eq(idConvocatoria), any(Pageable.class));
     }
 }

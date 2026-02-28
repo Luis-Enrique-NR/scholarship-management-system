@@ -1,5 +1,7 @@
 package pe.com.security.scholarship.repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -7,6 +9,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import pe.com.security.scholarship.domain.entity.Postulacion;
+import pe.com.security.scholarship.domain.enums.EstadoMatricula;
+import pe.com.security.scholarship.dto.projection.PostulanteConvocatoriaProjection;
 import pe.com.security.scholarship.dto.projection.PostulanteEvaluacionProjection;
 
 import java.util.List;
@@ -121,4 +125,37 @@ public interface PostulacionRepository extends JpaRepository<Postulacion, Intege
   @Modifying
   @Query("UPDATE Postulacion p SET p.promedioGeneral = :promedio WHERE p.id = :id")
   void actualizarPromedioGeneral(@Param("id") Integer id, @Param("promedio") Double promedio);
+
+  @Query(value = """
+        SELECT
+            p.id_estudiante as idEstudiante,
+            e.codigo_estudiante as codigo,
+            CONCAT(u.nombres, ' ', u.apellidos) as nombreCompleto,
+            p.aceptado as becado,
+            p.promedio_general as promedioGeneral,
+            p.fecha_postulacion as fechaPostulacion
+        FROM postulaciones p
+        INNER JOIN estudiantes e ON p.id_estudiante = e.id
+        INNER JOIN usuarios u ON u.id = e.id_usuario
+        WHERE p.id_convocatoria = :idConvocatoria
+        """,
+  countQuery = "SELECT count(*) FROM postulaciones p WHERE p.id_convocatoria = :idConvocatoria",
+  nativeQuery = true)
+  Page<PostulanteConvocatoriaProjection> buscarPostulantesConvocatoria(@Param("idConvocatoria") Integer idConvocatoria,
+          Pageable pageable);
+
+  @Query("SELECT p FROM Postulacion p " +
+          "LEFT JOIN FETCH p.matriculas m " +
+          "LEFT JOIN FETCH p.convocatoria c " +
+          "LEFT JOIN FETCH p.cursos cp " +
+          "LEFT JOIN FETCH m.seccion s " +
+          "WHERE p.estudiante.id = :idEstudiante " +
+          "AND YEAR(p.fechaPostulacion) = :year " +
+          "AND (m.estado = :estado OR m IS NULL)" +
+          "ORDER BY p.fechaPostulacion DESC")
+  List<Postulacion> findByYearWithMatricula(
+          @Param("idEstudiante") UUID idEstudiante,
+          @Param("year") Integer year,
+          @Param("estado") EstadoMatricula estado
+  );
 }
