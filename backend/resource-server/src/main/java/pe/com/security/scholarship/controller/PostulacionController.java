@@ -54,7 +54,7 @@ public class PostulacionController {
 
   @GetMapping("/historial")
   @PreAuthorize("hasRole('STUDENT')")
-  @Operation(summary = "Consulta de postulación", description = "Consultar estado actual de la postulación")
+  @Operation(summary = "Consulta de historial de postulaciones", description = "Obtener la lista de postulaciones por un determinado año")
   public ResponseEntity<ApiResponse<List<HistorialPostulacionResponse>>> getHistorialPostulacion(
           @RequestParam Integer year
   ) {
@@ -64,6 +64,7 @@ public class PostulacionController {
 
   @GetMapping("/{id}/{year}")
   @PreAuthorize("hasRole('SOCIAL_OUTREACH_SECRETARY') or hasRole('SOCIAL_OUTREACH_MANAGER')")
+  @Operation(summary = "Seguimiento de postulante", description = "Consultar postulaciones de un estudiante por año")
   public ResponseEntity<ApiResponse<DetallePostulanteResponse>> getPostulacionesEstudiante(
           @PathVariable UUID id,
           @PathVariable Integer year

@@ -32,4 +32,16 @@ public interface MatriculaRepository extends JpaRepository<Matricula, Integer> {
           )
   """, nativeQuery = true)
   boolean seMatriculo(@Param("idPostulacion") Integer idPostulacion);
+
+  @Query(value = """
+          SELECT EXISTS (
+              SELECT 1
+              FROM matriculas m
+              INNER JOIN postulaciones p
+                  ON p.id = m.id_postulacion
+              WHERE p.id_estudiante = :idEstudiante
+              AND estado = 'PENDIENTE'
+          )
+  """, nativeQuery = true)
+  boolean existsIntencionMatricula(@Param("idEstudiante") UUID idEstudiante);
 }
