@@ -5,9 +5,12 @@ import pe.com.security.scholarship.domain.entity.Matricula;
 import pe.com.security.scholarship.domain.entity.Postulacion;
 import pe.com.security.scholarship.domain.entity.Seccion;
 import pe.com.security.scholarship.domain.enums.EstadoMatricula;
+import pe.com.security.scholarship.dto.projection.SeccionIntencionProjection;
+import pe.com.security.scholarship.dto.response.CursoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.DetalleHorarioMatriculaResponse;
 import pe.com.security.scholarship.dto.response.IntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredMatriculaResponse;
+import pe.com.security.scholarship.dto.response.SeccionIntencionMatriculaResponse;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -56,6 +59,22 @@ public class MatriculaMapper {
                     : null)
             .notaMatricula(matricula.getNota())
             .updatedAt(matricula.getUpdatedAt())
+            .build();
+  }
+
+  public static SeccionIntencionMatriculaResponse mapSeccionIntencionMatricula(SeccionIntencionProjection projection) {
+    return SeccionIntencionMatriculaResponse.builder()
+            .idSeccion(projection.getIdSeccion())
+            .fechaInicio(projection.getFechaInicio())
+            .totalIntencionesMatricula(projection.getTotalIntencionesMatricula())
+            .build();
+  }
+
+  public static CursoIntencionMatriculaResponse mapCursoIntencionMatricula(SeccionIntencionProjection p) {
+    return CursoIntencionMatriculaResponse.builder()
+            .idCurso(p.getIdCurso())
+            .nombreCurso(p.getNombreCurso())
+            .codigoCurso(p.getCodigoCurso())
             .build();
   }
 }

@@ -1,6 +1,7 @@
 package pe.com.security.scholarship.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.com.security.scholarship.domain.entity.Curso;
@@ -8,9 +9,12 @@ import pe.com.security.scholarship.domain.entity.Estudiante;
 import pe.com.security.scholarship.domain.entity.Matricula;
 import pe.com.security.scholarship.domain.entity.Postulacion;
 import pe.com.security.scholarship.domain.entity.Seccion;
+import pe.com.security.scholarship.dto.projection.SeccionIntencionProjection;
 import pe.com.security.scholarship.dto.request.SubmitMatriculaRequest;
+import pe.com.security.scholarship.dto.response.CursoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.IntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredMatriculaResponse;
+import pe.com.security.scholarship.dto.response.SeccionIntencionMatriculaResponse;
 import pe.com.security.scholarship.exception.BadRequestException;
 import pe.com.security.scholarship.exception.NotFoundException;
 import pe.com.security.scholarship.mapper.MatriculaMapper;
@@ -22,8 +26,12 @@ import pe.com.security.scholarship.repository.SeccionRepository;
 import pe.com.security.scholarship.util.SecurityUtils;
 
 import java.time.LocalDate;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -70,9 +78,57 @@ public class MatriculaService {
     Estudiante estudiante = estudianteRepository.findByIdUsuario(idUsuario)
             .orElseThrow(() -> new NotFoundException("No se encontró estudiante asociado al id del payload"));
 
-    Matricula matricula = matriculaRepository.findMatriculaByIdEstudiante(estudiante.getId())
-            .orElseThrow(() -> new NotFoundException("No se encontró estudiante asociado al id del payload"));
+    Matricula matricula = matriculaRepository.findLastMatriculaByIdEstudiante(estudiante.getId(), Limit.of(1))
+            .stream()
+            .findFirst().orElseThrow(() -> new NotFoundException("No se encontró matrícula asociada al estudiante"));
 
     return MatriculaMapper.mapIntencionMatricula(matricula);
+  }
+
+  public List<CursoIntencionMatriculaResponse> getIntencionesMatriculaSeccion() {
+
+    // Se obtiene la lista de proyecciones con datos puntuales de la BD, esto ya viene "ordenado" de la BD
+    List<SeccionIntencionProjection> proyecciones = matriculaRepository.findIntencionesMatriculaSeccion();
+
+    if (proyecciones == null || proyecciones.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    class TemporalAgrupador {
+      final Integer idCurso;
+      final CursoIntencionMatriculaResponse curso;
+      final SeccionIntencionMatriculaResponse seccion;
+
+      TemporalAgrupador(SeccionIntencionProjection p) {
+        this.idCurso = p.getIdCurso();
+        this.curso = MatriculaMapper.mapCursoIntencionMatricula(p);
+        this.seccion = MatriculaMapper.mapSeccionIntencionMatricula(p);
+      }
+    }
+
+    List<TemporalAgrupador> temporales = proyecciones.stream()
+            .map(TemporalAgrupador::new)
+            .toList();
+
+    // Se crea un map agrupando secciones por cursos
+    Map<Integer, List<TemporalAgrupador>> agrupado = temporales.stream()
+            .collect(Collectors.groupingBy(t -> t.idCurso));
+
+    return agrupado.values().stream()
+            .map(listaTemporal -> {
+              // Tomamos la primera proyección para datos generales del curso
+              TemporalAgrupador primero = listaTemporal.getFirst();
+              CursoIntencionMatriculaResponse cursoFinal = primero.curso;
+
+              // Seteamos las secciones mapeadas reales al objeto curso
+              cursoFinal.setSecciones(listaTemporal.stream()
+                      .map(t -> t.seccion)
+                      .toList());
+
+              return cursoFinal;
+            }).sorted(Comparator.comparing(
+                    // Ordenamos usando datos reales de los DTOs ya agrupados
+                    c -> c.getSecciones().getFirst().getFechaInicio()
+            )).toList();
   }
 }

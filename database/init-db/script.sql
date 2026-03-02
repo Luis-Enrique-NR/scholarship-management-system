@@ -103,6 +103,7 @@ create table secciones (
 	id SERIAL primary key,
 	fecha_inicio date not null,
 	id_curso INT not null,
+	vacantes_disponibles INT,
 	
 	created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ,

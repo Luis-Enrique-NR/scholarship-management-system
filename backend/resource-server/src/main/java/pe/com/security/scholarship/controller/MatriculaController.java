@@ -12,10 +12,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import pe.com.security.scholarship.dto.request.SubmitMatriculaRequest;
+import pe.com.security.scholarship.dto.response.CursoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.IntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredMatriculaResponse;
 import pe.com.security.scholarship.service.MatriculaService;
 import pe.com.security.scholarship.util.ApiResponse;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/matriculas")
@@ -42,5 +45,14 @@ public class MatriculaController {
   public ResponseEntity<ApiResponse<IntencionMatriculaResponse>> getIntencionMatricula() {
     IntencionMatriculaResponse response = matriculaService.getIntencionMatricula();
     return ResponseEntity.ok(new ApiResponse<>("Registro exitoso", "200", response));
+  }
+
+  @GetMapping("/intenciones")
+  @PreAuthorize("hasRole('TRAINING_CENTER_SECRETARY')")
+  @Operation(summary = "Consulta de secciones con intenciones de matrícula",
+          description = "Obtener la lista de secciones con fecha de inicio más reciente y cantidad de intenciones de matrícula")
+  public ResponseEntity<ApiResponse<List<CursoIntencionMatriculaResponse>>> getIntencionesMatriculaSeccion() {
+    List<CursoIntencionMatriculaResponse> response = matriculaService.getIntencionesMatriculaSeccion();
+    return ResponseEntity.ok(new ApiResponse<>("Consulta exitosa", "200", response));
   }
 }

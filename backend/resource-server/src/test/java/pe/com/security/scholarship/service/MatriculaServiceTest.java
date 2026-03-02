@@ -7,13 +7,16 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Limit;
 import pe.com.security.scholarship.domain.entity.Curso;
 import pe.com.security.scholarship.domain.entity.Estudiante;
 import pe.com.security.scholarship.domain.entity.Matricula;
 import pe.com.security.scholarship.domain.entity.Postulacion;
 import pe.com.security.scholarship.domain.entity.Seccion;
 import pe.com.security.scholarship.domain.enums.EstadoMatricula;
+import pe.com.security.scholarship.dto.projection.SeccionIntencionProjection;
 import pe.com.security.scholarship.dto.request.SubmitMatriculaRequest;
+import pe.com.security.scholarship.dto.response.CursoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.IntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredMatriculaResponse;
 import pe.com.security.scholarship.exception.BadRequestException;
@@ -36,6 +39,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -280,7 +284,9 @@ class MatriculaServiceTest {
             securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
 
             when(estudianteRepository.findByIdUsuario(idUsuario)).thenReturn(Optional.of(estudiante));
-            when(matriculaRepository.findMatriculaByIdEstudiante(idEstudiante)).thenReturn(Optional.of(matricula));
+            // Actualización: ahora devuelve una lista
+            when(matriculaRepository.findLastMatriculaByIdEstudiante(eq(idEstudiante), any(Limit.class)))
+                    .thenReturn(List.of(matricula));
 
             // Act
             IntencionMatriculaResponse response = matriculaService.getIntencionMatricula();
@@ -304,12 +310,90 @@ class MatriculaServiceTest {
             securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
 
             when(estudianteRepository.findByIdUsuario(idUsuario)).thenReturn(Optional.of(estudiante));
-            when(matriculaRepository.findMatriculaByIdEstudiante(idEstudiante)).thenReturn(Optional.empty());
+            // Actualización: ahora devuelve una lista vacía
+            when(matriculaRepository.findLastMatriculaByIdEstudiante(eq(idEstudiante), any(Limit.class)))
+                    .thenReturn(Collections.emptyList());
 
             // Act & Assert
             assertThatThrownBy(() -> matriculaService.getIntencionMatricula())
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessage("No se encontró estudiante asociado al id del payload");
+                    .hasMessage("No se encontró matrícula asociada al estudiante");
         }
+    }
+
+    @Test
+    void getIntencionesMatriculaSeccion_ShouldReturnGroupedAndSortedList() {
+        // Arrange
+        SeccionIntencionProjection proj1 = new RealProjection(101, LocalDate.now().plusDays(5), 1, "Curso A", "C001", 10);
+        SeccionIntencionProjection proj2 = new RealProjection(102, LocalDate.now().plusDays(10), 1, "Curso A", "C001", 5);
+        SeccionIntencionProjection proj3 = new RealProjection(201, LocalDate.now().plusDays(2), 2, "Curso B", "C002", 8);
+
+        when(matriculaRepository.findIntencionesMatriculaSeccion())
+                .thenReturn(List.of(proj1, proj2, proj3));
+
+        // Act
+        List<CursoIntencionMatriculaResponse> result = matriculaService.getIntencionesMatriculaSeccion();
+
+        // Assert
+        assertThat(result).hasSize(2); // 2 cursos únicos
+
+        // Verificar ordenamiento: Curso B debe ir primero porque su sección inicia antes
+        assertThat(result.get(0).getIdCurso()).isEqualTo(2);
+        assertThat(result.get(1).getIdCurso()).isEqualTo(1);
+
+        // Verificar agrupación
+        CursoIntencionMatriculaResponse cursoA = result.stream()
+                .filter(c -> c.getIdCurso() == 1)
+                .findFirst()
+                .orElseThrow();
+        assertThat(cursoA.getSecciones()).hasSize(2); // 2 secciones para Curso A
+    }
+
+    @Test
+    void getIntencionesMatriculaSeccion_ShouldReturnEmptyList_WhenNoData() {
+        // Arrange
+        when(matriculaRepository.findIntencionesMatriculaSeccion()).thenReturn(Collections.emptyList());
+
+        // Act
+        List<CursoIntencionMatriculaResponse> result = matriculaService.getIntencionesMatriculaSeccion();
+
+        // Assert
+        assertThat(result).isNotNull().isEmpty();
+    }
+
+    static class RealProjection implements SeccionIntencionProjection {
+        private final Integer idSeccion;
+        private final LocalDate fechaInicio;
+        private final Integer idCurso;
+        private final String nombreCurso;
+        private final String codigoCurso;
+        private final Integer totalIntencionesMatricula;
+
+        public RealProjection(Integer idSeccion, LocalDate fechaInicio, Integer idCurso, String nombreCurso, String codigoCurso, Integer totalIntencionesMatricula) {
+            this.idSeccion = idSeccion;
+            this.fechaInicio = fechaInicio;
+            this.idCurso = idCurso;
+            this.nombreCurso = nombreCurso;
+            this.codigoCurso = codigoCurso;
+            this.totalIntencionesMatricula = totalIntencionesMatricula;
+        }
+
+        @Override
+        public Integer getIdSeccion() { return idSeccion; }
+
+        @Override
+        public LocalDate getFechaInicio() { return fechaInicio; }
+
+        @Override
+        public Integer getIdCurso() { return idCurso; }
+
+        @Override
+        public String getNombreCurso() { return nombreCurso; }
+
+        @Override
+        public String getCodigoCurso() { return codigoCurso; }
+
+        @Override
+        public Integer getTotalIntencionesMatricula() { return totalIntencionesMatricula; }
     }
 }
