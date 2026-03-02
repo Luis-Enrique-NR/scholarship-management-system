@@ -6,9 +6,12 @@ import pe.com.security.scholarship.domain.entity.Postulacion;
 import pe.com.security.scholarship.domain.entity.Seccion;
 import pe.com.security.scholarship.domain.enums.EstadoMatricula;
 import pe.com.security.scholarship.dto.response.DetalleHorarioMatriculaResponse;
+import pe.com.security.scholarship.dto.response.IntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredMatriculaResponse;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 
 public class MatriculaMapper {
 
@@ -36,6 +39,23 @@ public class MatriculaMapper {
             .dia(horarioSeccion.getDiaSemana())
             .horaInicio(horarioSeccion.getHoraInicio())
             .horaFin(horarioSeccion.getHoraFin())
+            .build();
+  }
+
+  public static IntencionMatriculaResponse mapIntencionMatricula(Matricula matricula) {
+    return IntencionMatriculaResponse.builder()
+            .idMatricula(matricula.getId())
+            .estadoMatricula(matricula.getEstado())
+            .fechaSolicitud(LocalDate.ofInstant(matricula.getFechaSolicitud(), ZoneId.systemDefault()))
+            .nombreCurso(matricula.getSeccion().getCurso().getNombre())
+            .fechaInicioSeccion(matricula.getSeccion().getFechaInicio())
+            .horarioSeccion(matricula.getSeccion().getHorarios().stream().map(MatriculaMapper::mapDetalleHorario).toList())
+            // Los valores de aqui abajo pueden ser nulos
+            .fechaMatricula(matricula.getFechaMatricula() != null
+                    ? LocalDate.ofInstant(matricula.getFechaMatricula(), ZoneId.systemDefault())
+                    : null)
+            .notaMatricula(matricula.getNota())
+            .updatedAt(matricula.getUpdatedAt())
             .build();
   }
 }

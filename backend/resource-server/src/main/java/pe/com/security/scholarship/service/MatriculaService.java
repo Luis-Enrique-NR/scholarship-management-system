@@ -9,6 +9,7 @@ import pe.com.security.scholarship.domain.entity.Matricula;
 import pe.com.security.scholarship.domain.entity.Postulacion;
 import pe.com.security.scholarship.domain.entity.Seccion;
 import pe.com.security.scholarship.dto.request.SubmitMatriculaRequest;
+import pe.com.security.scholarship.dto.response.IntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredMatriculaResponse;
 import pe.com.security.scholarship.exception.BadRequestException;
 import pe.com.security.scholarship.exception.NotFoundException;
@@ -61,5 +62,17 @@ public class MatriculaService {
     Matricula matricula = matriculaRepository.save(MatriculaMapper.buildMatricula(seccionMatricula, postulacion));
 
     return MatriculaMapper.mapSubmitMatricula(matricula);
+  }
+
+  @Transactional(readOnly = true)
+  public IntencionMatriculaResponse getIntencionMatricula() {
+    UUID idUsuario = SecurityUtils.getCurrentUserId();
+    Estudiante estudiante = estudianteRepository.findByIdUsuario(idUsuario)
+            .orElseThrow(() -> new NotFoundException("No se encontró estudiante asociado al id del payload"));
+
+    Matricula matricula = matriculaRepository.findMatriculaByIdEstudiante(estudiante.getId())
+            .orElseThrow(() -> new NotFoundException("No se encontró estudiante asociado al id del payload"));
+
+    return MatriculaMapper.mapIntencionMatricula(matricula);
   }
 }

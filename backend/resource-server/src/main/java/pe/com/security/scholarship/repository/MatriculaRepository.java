@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import pe.com.security.scholarship.domain.entity.Matricula;
 
+import java.util.Optional;
 import java.util.UUID;
 
 public interface MatriculaRepository extends JpaRepository<Matricula, Integer> {
@@ -21,7 +22,6 @@ public interface MatriculaRepository extends JpaRepository<Matricula, Integer> {
           limit 1
     """, nativeQuery = true)
   Double notaUltimaMatricula(@Param("idEstudiante") UUID idEstudiante);
-
 
   @Query(value = """
           SELECT EXISTS (
@@ -44,4 +44,12 @@ public interface MatriculaRepository extends JpaRepository<Matricula, Integer> {
           )
   """, nativeQuery = true)
   boolean existsIntencionMatricula(@Param("idEstudiante") UUID idEstudiante);
+
+  @Query("SELECT m FROM Matricula m " +
+          "JOIN FETCH m.seccion s " +
+          "JOIN FETCH s.curso c " +
+          "JOIN m.postulacion p " +
+          "WHERE p.estudiante.id = :idEstudiante " +
+          "ORDER BY m.fechaSolicitud DESC")
+  Optional<Matricula> findMatriculaByIdEstudiante(@Param("idEstudiante") UUID idEstudiante);
 }
