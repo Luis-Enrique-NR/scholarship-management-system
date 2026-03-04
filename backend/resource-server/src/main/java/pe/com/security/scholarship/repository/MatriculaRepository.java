@@ -5,7 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import pe.com.security.scholarship.domain.entity.Matricula;
+import pe.com.security.scholarship.dto.projection.BecadoIntencionProjection;
 import pe.com.security.scholarship.dto.projection.SeccionIntencionProjection;
+import pe.com.security.scholarship.dto.response.BecadoIntencionMatriculaResponse;
 
 import java.util.List;
 import java.util.Optional;
@@ -66,4 +68,22 @@ public interface MatriculaRepository extends JpaRepository<Matricula, Integer> {
           "GROUP BY s.id, c.id " +
           "ORDER BY s.fecha_inicio ASC", nativeQuery = true)
   List<SeccionIntencionProjection> findIntencionesMatriculaSeccion();
+
+  @Query(value = """
+          select
+          	m.id_postulacion as idPostulacion,
+          	CONCAT(u.nombres, ' ', u.apellidos) as nombreCompleto,
+          	e.codigo_estudiante as codigo,
+          	p.promedio_general as promedioGeneral,
+          	m.estado as estadoMatricula
+          from matriculas m
+          inner join postulaciones p
+          	on p.id = m.id_postulacion
+          inner join estudiantes e
+          	on e.id = p.id_estudiante
+          inner join usuarios u
+          	on u.id = e.id_usuario
+          where m.id_seccion = :idSeccion
+  """, nativeQuery = true)
+  List<BecadoIntencionProjection> findBecadosIntencionMatricula(@Param("idSeccion") Integer idSeccion);
 }

@@ -9,8 +9,10 @@ import pe.com.security.scholarship.domain.entity.Estudiante;
 import pe.com.security.scholarship.domain.entity.Matricula;
 import pe.com.security.scholarship.domain.entity.Postulacion;
 import pe.com.security.scholarship.domain.entity.Seccion;
+import pe.com.security.scholarship.dto.projection.IdentificacionEstudianteProjection;
 import pe.com.security.scholarship.dto.projection.SeccionIntencionProjection;
 import pe.com.security.scholarship.dto.request.SubmitMatriculaRequest;
+import pe.com.security.scholarship.dto.response.BecadoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.CursoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.IntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredMatriculaResponse;
@@ -30,6 +32,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -130,5 +133,16 @@ public class MatriculaService {
                     // Ordenamos usando datos reales de los DTOs ya agrupados
                     c -> c.getSecciones().getFirst().getFechaInicio()
             )).toList();
+  }
+
+  @Transactional(readOnly = true)
+  public List<BecadoIntencionMatriculaResponse> getBecadosSeccion(Integer idSeccion) {
+    if (!seccionRepository.existsById(idSeccion)) {
+      throw new NotFoundException("No se encontró la sección con el ID enviado");
+    }
+
+    return matriculaRepository.findBecadosIntencionMatricula(idSeccion).stream()
+            .map(MatriculaMapper::mapBecadoIntencionMatricula)
+            .toList();
   }
 }

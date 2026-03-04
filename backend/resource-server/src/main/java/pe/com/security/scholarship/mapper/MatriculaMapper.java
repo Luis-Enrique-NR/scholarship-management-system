@@ -5,7 +5,10 @@ import pe.com.security.scholarship.domain.entity.Matricula;
 import pe.com.security.scholarship.domain.entity.Postulacion;
 import pe.com.security.scholarship.domain.entity.Seccion;
 import pe.com.security.scholarship.domain.enums.EstadoMatricula;
+import pe.com.security.scholarship.dto.projection.BecadoIntencionProjection;
+import pe.com.security.scholarship.dto.projection.IdentificacionEstudianteProjection;
 import pe.com.security.scholarship.dto.projection.SeccionIntencionProjection;
+import pe.com.security.scholarship.dto.response.BecadoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.CursoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.DetalleHorarioMatriculaResponse;
 import pe.com.security.scholarship.dto.response.IntencionMatriculaResponse;
@@ -75,6 +78,16 @@ public class MatriculaMapper {
             .idCurso(p.getIdCurso())
             .nombreCurso(p.getNombreCurso())
             .codigoCurso(p.getCodigoCurso())
+            .build();
+  }
+
+  public static BecadoIntencionMatriculaResponse mapBecadoIntencionMatricula(BecadoIntencionProjection projection) {
+    return BecadoIntencionMatriculaResponse.builder()
+            .idPostulacion(projection.getIdPostulacion())
+            .nombreCompleto(projection.getNombreCompleto())
+            .codigo(projection.getCodigo())
+            .promedioGeneral(projection.getPromedioGeneral())
+            .estadoMatricula(projection.getEstadoMatricula())
             .build();
   }
 }

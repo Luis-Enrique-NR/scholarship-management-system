@@ -14,8 +14,10 @@ import pe.com.security.scholarship.domain.entity.Matricula;
 import pe.com.security.scholarship.domain.entity.Postulacion;
 import pe.com.security.scholarship.domain.entity.Seccion;
 import pe.com.security.scholarship.domain.enums.EstadoMatricula;
+import pe.com.security.scholarship.dto.projection.BecadoIntencionProjection;
 import pe.com.security.scholarship.dto.projection.SeccionIntencionProjection;
 import pe.com.security.scholarship.dto.request.SubmitMatriculaRequest;
+import pe.com.security.scholarship.dto.response.BecadoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.CursoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.IntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredMatriculaResponse;
@@ -361,6 +363,51 @@ class MatriculaServiceTest {
         assertThat(result).isNotNull().isEmpty();
     }
 
+    @Test
+    void getBecadosSeccion_ShouldReturnList_WhenSectionExistsAndDataAvailable() {
+        // Arrange
+        Integer idSeccion = 1;
+        BecadoIntencionProjection proj1 = new RealBecadoProjection(100, "Juan Perez", "S001", 18.5, EstadoMatricula.PENDIENTE);
+        BecadoIntencionProjection proj2 = new RealBecadoProjection(101, "Maria Lopez", "S002", 19.0, EstadoMatricula.ACEPTADO);
+
+        when(seccionRepository.existsById(idSeccion)).thenReturn(true);
+        when(matriculaRepository.findBecadosIntencionMatricula(idSeccion)).thenReturn(List.of(proj1, proj2));
+
+        // Act
+        List<BecadoIntencionMatriculaResponse> result = matriculaService.getBecadosSeccion(idSeccion);
+
+        // Assert
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getNombreCompleto()).isEqualTo("Juan Perez");
+        assertThat(result.get(1).getEstadoMatricula()).isEqualTo(EstadoMatricula.ACEPTADO);
+    }
+
+    @Test
+    void getBecadosSeccion_ShouldThrowNotFound_WhenSectionDoesNotExist() {
+        // Arrange
+        Integer idSeccion = 999;
+        when(seccionRepository.existsById(idSeccion)).thenReturn(false);
+
+        // Act & Assert
+        assertThatThrownBy(() -> matriculaService.getBecadosSeccion(idSeccion))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessage("No se encontró la sección con el ID enviado");
+    }
+
+    @Test
+    void getBecadosSeccion_ShouldReturnEmptyList_WhenSectionExistsButNoData() {
+        // Arrange
+        Integer idSeccion = 1;
+        when(seccionRepository.existsById(idSeccion)).thenReturn(true);
+        when(matriculaRepository.findBecadosIntencionMatricula(idSeccion)).thenReturn(Collections.emptyList());
+
+        // Act
+        List<BecadoIntencionMatriculaResponse> result = matriculaService.getBecadosSeccion(idSeccion);
+
+        // Assert
+        assertThat(result).isNotNull().isEmpty();
+    }
+
     static class RealProjection implements SeccionIntencionProjection {
         private final Integer idSeccion;
         private final LocalDate fechaInicio;
@@ -395,5 +442,36 @@ class MatriculaServiceTest {
 
         @Override
         public Integer getTotalIntencionesMatricula() { return totalIntencionesMatricula; }
+    }
+
+    static class RealBecadoProjection implements BecadoIntencionProjection {
+        private final Integer idPostulacion;
+        private final String nombreCompleto;
+        private final String codigo;
+        private final Double promedioGeneral;
+        private final EstadoMatricula estadoMatricula;
+
+        public RealBecadoProjection(Integer idPostulacion, String nombreCompleto, String codigo, Double promedioGeneral, EstadoMatricula estadoMatricula) {
+            this.idPostulacion = idPostulacion;
+            this.nombreCompleto = nombreCompleto;
+            this.codigo = codigo;
+            this.promedioGeneral = promedioGeneral;
+            this.estadoMatricula = estadoMatricula;
+        }
+
+        @Override
+        public Integer getIdPostulacion() { return idPostulacion; }
+
+        @Override
+        public String getNombreCompleto() { return nombreCompleto; }
+
+        @Override
+        public String getCodigo() { return codigo; }
+
+        @Override
+        public Double getPromedioGeneral() { return promedioGeneral; }
+
+        @Override
+        public EstadoMatricula getEstadoMatricula() { return estadoMatricula; }
     }
 }
