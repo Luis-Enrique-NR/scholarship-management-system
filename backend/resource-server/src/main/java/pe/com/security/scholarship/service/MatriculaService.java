@@ -9,7 +9,6 @@ import pe.com.security.scholarship.domain.entity.Estudiante;
 import pe.com.security.scholarship.domain.entity.Matricula;
 import pe.com.security.scholarship.domain.entity.Postulacion;
 import pe.com.security.scholarship.domain.entity.Seccion;
-import pe.com.security.scholarship.dto.projection.IdentificacionEstudianteProjection;
 import pe.com.security.scholarship.dto.projection.SeccionIntencionProjection;
 import pe.com.security.scholarship.dto.request.SubmitMatriculaRequest;
 import pe.com.security.scholarship.dto.response.BecadoIntencionMatriculaResponse;
@@ -32,7 +31,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 

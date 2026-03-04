@@ -2,6 +2,7 @@ package pe.com.security.scholarship.repository;
 
 import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import pe.com.security.scholarship.domain.entity.Matricula;
@@ -86,4 +87,20 @@ public interface MatriculaRepository extends JpaRepository<Matricula, Integer> {
           where m.id_seccion = :idSeccion
   """, nativeQuery = true)
   List<BecadoIntencionProjection> findBecadosIntencionMatricula(@Param("idSeccion") Integer idSeccion);
+
+  @Modifying
+  @Query(value = """
+          UPDATE matriculas m
+          SET estado = 'ACEPTADO'
+          FROM (
+              SELECT id
+              FROM matriculas
+              WHERE id_seccion = :idSeccion
+                AND estado = 'PENDIENTE'
+              ORDER BY fecha_solicitud
+              LIMIT :nuevasVacantes
+          ) AS sub
+          WHERE m.id = sub.id;
+  """, nativeQuery = true)
+  int matricularPostulantes(@Param("idSeccion") Integer idSeccion, @Param("nuevasVacantes") Integer nuevasVacantes);
 }

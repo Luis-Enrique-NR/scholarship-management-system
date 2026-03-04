@@ -6,7 +6,6 @@ import pe.com.security.scholarship.domain.entity.Postulacion;
 import pe.com.security.scholarship.domain.entity.Seccion;
 import pe.com.security.scholarship.domain.enums.EstadoMatricula;
 import pe.com.security.scholarship.dto.projection.BecadoIntencionProjection;
-import pe.com.security.scholarship.dto.projection.IdentificacionEstudianteProjection;
 import pe.com.security.scholarship.dto.projection.SeccionIntencionProjection;
 import pe.com.security.scholarship.dto.response.BecadoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.CursoIntencionMatriculaResponse;
