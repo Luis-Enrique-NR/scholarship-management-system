@@ -70,7 +70,7 @@ public class MatriculaMapper {
     return SeccionIntencionMatriculaResponse.builder()
             .idSeccion(projection.getIdSeccion())
             .fechaInicio(projection.getFechaInicio())
-            .totalIntencionesMatricula(projection.getTotalIntencionesMatricula())
+            .totalIntencionesPendientes(projection.getTotalIntencionesPendientes())
             .build();
   }
 

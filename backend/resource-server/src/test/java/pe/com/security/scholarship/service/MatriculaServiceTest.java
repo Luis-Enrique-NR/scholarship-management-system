@@ -331,9 +331,30 @@ class MatriculaServiceTest {
     @Test
     void getIntencionesMatriculaSeccion_ShouldReturnGroupedAndSortedList() {
         // Arrange
-        SeccionIntencionProjection proj1 = new RealProjection(101, LocalDate.now().plusDays(5), 1, "Curso A", "C001", 10);
-        SeccionIntencionProjection proj2 = new RealProjection(102, LocalDate.now().plusDays(10), 1, "Curso A", "C001", 5);
-        SeccionIntencionProjection proj3 = new RealProjection(201, LocalDate.now().plusDays(2), 2, "Curso B", "C002", 8);
+        SeccionIntencionProjection proj1 = new SeccionIntencionProjection() {
+            public Integer getIdSeccion() { return 101; }
+            public LocalDate getFechaInicio() { return LocalDate.now().plusDays(5); }
+            public Integer getIdCurso() { return 1; }
+            public String getNombreCurso() { return "Curso A"; }
+            public String getCodigoCurso() { return "C001"; }
+            public Integer getTotalIntencionesPendientes() { return 10; }
+        };
+        SeccionIntencionProjection proj2 = new SeccionIntencionProjection() {
+            public Integer getIdSeccion() { return 102; }
+            public LocalDate getFechaInicio() { return LocalDate.now().plusDays(10); }
+            public Integer getIdCurso() { return 1; }
+            public String getNombreCurso() { return "Curso A"; }
+            public String getCodigoCurso() { return "C001"; }
+            public Integer getTotalIntencionesPendientes() { return 5; }
+        };
+        SeccionIntencionProjection proj3 = new SeccionIntencionProjection() {
+            public Integer getIdSeccion() { return 201; }
+            public LocalDate getFechaInicio() { return LocalDate.now().plusDays(2); }
+            public Integer getIdCurso() { return 2; }
+            public String getNombreCurso() { return "Curso B"; }
+            public String getCodigoCurso() { return "C002"; }
+            public Integer getTotalIntencionesPendientes() { return 8; }
+        };
 
         when(matriculaRepository.findIntencionesMatriculaSeccion())
                 .thenReturn(List.of(proj1, proj2, proj3));
@@ -586,42 +607,6 @@ class MatriculaServiceTest {
                     .isInstanceOf(NotFoundException.class)
                     .hasMessage("No se encontró la matrícula con el ID enviado");
         }
-    }
-
-    static class RealProjection implements SeccionIntencionProjection {
-        private final Integer idSeccion;
-        private final LocalDate fechaInicio;
-        private final Integer idCurso;
-        private final String nombreCurso;
-        private final String codigoCurso;
-        private final Integer totalIntencionesMatricula;
-
-        public RealProjection(Integer idSeccion, LocalDate fechaInicio, Integer idCurso, String nombreCurso, String codigoCurso, Integer totalIntencionesMatricula) {
-            this.idSeccion = idSeccion;
-            this.fechaInicio = fechaInicio;
-            this.idCurso = idCurso;
-            this.nombreCurso = nombreCurso;
-            this.codigoCurso = codigoCurso;
-            this.totalIntencionesMatricula = totalIntencionesMatricula;
-        }
-
-        @Override
-        public Integer getIdSeccion() { return idSeccion; }
-
-        @Override
-        public LocalDate getFechaInicio() { return fechaInicio; }
-
-        @Override
-        public Integer getIdCurso() { return idCurso; }
-
-        @Override
-        public String getNombreCurso() { return nombreCurso; }
-
-        @Override
-        public String getCodigoCurso() { return codigoCurso; }
-
-        @Override
-        public Integer getTotalIntencionesMatricula() { return totalIntencionesMatricula; }
     }
 
     static class RealBecadoProjection implements BecadoIntencionProjection {

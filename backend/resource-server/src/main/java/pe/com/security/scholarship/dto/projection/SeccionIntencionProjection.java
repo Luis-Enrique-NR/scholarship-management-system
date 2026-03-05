@@ -8,5 +8,5 @@ public interface SeccionIntencionProjection {
   Integer getIdCurso();
   String getNombreCurso();
   String getCodigoCurso();
-  Integer getTotalIntencionesMatricula();
+  Integer getTotalIntencionesPendientes();
 }

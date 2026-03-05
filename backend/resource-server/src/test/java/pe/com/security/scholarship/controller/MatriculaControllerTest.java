@@ -163,7 +163,7 @@ class MatriculaControllerTest {
         SeccionIntencionMatriculaResponse seccionResponse = SeccionIntencionMatriculaResponse.builder()
                 .idSeccion(101)
                 .fechaInicio(LocalDate.now().plusDays(5))
-                .totalIntencionesMatricula(10)
+                .totalIntencionesPendientes(10)
                 .build();
 
         CursoIntencionMatriculaResponse cursoResponse = CursoIntencionMatriculaResponse.builder()
@@ -185,7 +185,7 @@ class MatriculaControllerTest {
                 .andExpect(jsonPath("$.data[0].idCurso").value(1))
                 .andExpect(jsonPath("$.data[0].nombreCurso").value("Curso Test"))
                 .andExpect(jsonPath("$.data[0].secciones[0].idSeccion").value(101))
-                .andExpect(jsonPath("$.data[0].secciones[0].totalIntencionesMatricula").value(10));
+                .andExpect(jsonPath("$.data[0].secciones[0].totalIntencionesPendientes").value(10));
 
         verify(matriculaService, times(1)).getIntencionesMatriculaSeccion();
     }

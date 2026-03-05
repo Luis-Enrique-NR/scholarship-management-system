@@ -9,6 +9,7 @@ import pe.com.security.scholarship.domain.entity.Matricula;
 import pe.com.security.scholarship.dto.projection.BecadoIntencionProjection;
 import pe.com.security.scholarship.dto.projection.SeccionIntencionProjection;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -59,10 +60,10 @@ public interface MatriculaRepository extends JpaRepository<Matricula, Integer> {
 
   @Query(value = "SELECT s.id as idSeccion, s.fecha_inicio as fechaInicio, " +
           "c.id as idCurso, c.nombre as nombreCurso, c.codigo as codigoCurso, " +
-          "count(m.id) as totalIntencionesMatricula " +
+          "count(m.id) as totalIntencionesPendientes " +
           "FROM secciones s " +
           "INNER JOIN cursos c ON s.id_curso = c.id " +
-          "INNER JOIN matriculas m ON m.id_seccion = s.id " +
+          "INNER JOIN matriculas m ON m.id_seccion = s.id and m.estado = 'PENDIENTE' " +
           "WHERE s.fecha_inicio > CURRENT_DATE " +
           "GROUP BY s.id, c.id " +
           "ORDER BY s.fecha_inicio ASC", nativeQuery = true)
@@ -98,7 +99,18 @@ public interface MatriculaRepository extends JpaRepository<Matricula, Integer> {
               ORDER BY fecha_solicitud
               LIMIT :nuevasVacantes
           ) AS sub
-          WHERE m.id = sub.id;
+          WHERE m.id = sub.id
   """, nativeQuery = true)
   int matricularPostulantes(@Param("idSeccion") Integer idSeccion, @Param("nuevasVacantes") Integer nuevasVacantes);
+
+  @Modifying
+  @Query(value = """
+          UPDATE matriculas m
+          SET estado = 'RECHAZADO'
+          FROM secciones s
+          WHERE m.id_seccion = s.id
+            AND m.estado = 'PENDIENTE'
+            AND s.fecha_inicio = :currentDate
+  """, nativeQuery = true)
+  int rechazarPostulantes(@Param("currentDate") LocalDate hoy);
 }

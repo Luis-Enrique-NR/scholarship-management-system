@@ -1,8 +1,14 @@
 package pe.com.security.scholarship.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Limit;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
+import org.springframework.retry.annotation.Retryable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.TransactionSystemException;
 import org.springframework.transaction.annotation.Transactional;
 import pe.com.security.scholarship.domain.entity.Curso;
 import pe.com.security.scholarship.domain.entity.Empleado;
@@ -178,5 +184,32 @@ public class MatriculaService {
     matricula.setFechaMatricula(request.getAprobado() ? Instant.now() : null);
 
     matricula.setEstado(request.getAprobado() ? EstadoMatricula.ACEPTADO : EstadoMatricula.RECHAZADO);
+  }
+
+  @Scheduled(cron = "0 5 0 * * *")
+  public void ejecutarCron() {
+    System.out.println("Iniciando cron de actualización...");
+    try {
+      int total = procesarRechazos();
+      System.out.println("Cron exitoso: "+total+" intenciones de matrícula rechazadas");
+    } catch (Exception e) {
+      System.out.println("El cron falló definitivamente tras los reintentos");
+    }
+  }
+
+  @Transactional
+  @Retryable(
+          retryFor = { TransactionSystemException.class, DataAccessException.class },
+          maxAttempts = 5,
+          backoff = @Backoff(delay = 300000)
+  )
+  public int procesarRechazos() {
+    return matriculaRepository.rechazarPostulantes(LocalDate.now());
+  }
+
+  @Recover
+  public void recover(TransactionSystemException e) {
+    System.out.println("ERROR CRÍTICO: El cron falló tras 5 intentos debido a un error de transacción. " +
+            "Se requiere intervención manual");
   }
 }

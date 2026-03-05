@@ -10,5 +10,5 @@ import java.time.LocalDate;
 public class SeccionIntencionMatriculaResponse {
   private Integer idSeccion;
   private LocalDate fechaInicio;
-  private Integer totalIntencionesMatricula;
+  private Integer totalIntencionesPendientes;
 }
