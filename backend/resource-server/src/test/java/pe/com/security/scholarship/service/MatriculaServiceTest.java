@@ -17,10 +17,10 @@ import pe.com.security.scholarship.domain.enums.EstadoMatricula;
 import pe.com.security.scholarship.dto.projection.BecadoIntencionProjection;
 import pe.com.security.scholarship.dto.projection.SeccionIntencionProjection;
 import pe.com.security.scholarship.dto.request.SubmitMatriculaRequest;
-import pe.com.security.scholarship.dto.response.BecadoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.CursoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.IntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredMatriculaResponse;
+import pe.com.security.scholarship.dto.response.SeccionBecadosResponse;
 import pe.com.security.scholarship.exception.BadRequestException;
 import pe.com.security.scholarship.exception.NotFoundException;
 import pe.com.security.scholarship.repository.CursoRepository;
@@ -364,29 +364,38 @@ class MatriculaServiceTest {
     }
 
     @Test
-    void getBecadosSeccion_ShouldReturnList_WhenSectionExistsAndDataAvailable() {
+    void getBecadosSeccion_ShouldReturnResponse_WhenSectionExistsAndDataAvailable() {
         // Arrange
         Integer idSeccion = 1;
+        Seccion seccion = new Seccion();
+        seccion.setId(idSeccion);
+        seccion.setFechaInicio(LocalDate.now().plusDays(5));
+        seccion.setVacantesDisponibles(20);
+
         BecadoIntencionProjection proj1 = new RealBecadoProjection(100, "Juan Perez", "S001", 18.5, EstadoMatricula.PENDIENTE);
         BecadoIntencionProjection proj2 = new RealBecadoProjection(101, "Maria Lopez", "S002", 19.0, EstadoMatricula.ACEPTADO);
 
-        when(seccionRepository.existsById(idSeccion)).thenReturn(true);
+        when(seccionRepository.findById(idSeccion)).thenReturn(Optional.of(seccion));
+        when(seccionRepository.getVacantesRestantes(idSeccion)).thenReturn(15);
         when(matriculaRepository.findBecadosIntencionMatricula(idSeccion)).thenReturn(List.of(proj1, proj2));
 
         // Act
-        List<BecadoIntencionMatriculaResponse> result = matriculaService.getBecadosSeccion(idSeccion);
+        SeccionBecadosResponse result = matriculaService.getBecadosSeccion(idSeccion);
 
         // Assert
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).getNombreCompleto()).isEqualTo("Juan Perez");
-        assertThat(result.get(1).getEstadoMatricula()).isEqualTo(EstadoMatricula.ACEPTADO);
+        assertThat(result).isNotNull();
+        assertThat(result.getIdSeccion()).isEqualTo(idSeccion);
+        assertThat(result.getVacantesTotales()).isEqualTo(20);
+        assertThat(result.getVacantesDisponibles()).isEqualTo(15);
+        assertThat(result.getBecados()).hasSize(2);
+        assertThat(result.getBecados().get(0).getNombreCompleto()).isEqualTo("Juan Perez");
     }
 
     @Test
     void getBecadosSeccion_ShouldThrowNotFound_WhenSectionDoesNotExist() {
         // Arrange
         Integer idSeccion = 999;
-        when(seccionRepository.existsById(idSeccion)).thenReturn(false);
+        when(seccionRepository.findById(idSeccion)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThatThrownBy(() -> matriculaService.getBecadosSeccion(idSeccion))
@@ -398,14 +407,21 @@ class MatriculaServiceTest {
     void getBecadosSeccion_ShouldReturnEmptyList_WhenSectionExistsButNoData() {
         // Arrange
         Integer idSeccion = 1;
-        when(seccionRepository.existsById(idSeccion)).thenReturn(true);
+        Seccion seccion = new Seccion();
+        seccion.setId(idSeccion);
+        seccion.setVacantesDisponibles(20);
+
+        when(seccionRepository.findById(idSeccion)).thenReturn(Optional.of(seccion));
+        when(seccionRepository.getVacantesRestantes(idSeccion)).thenReturn(20);
         when(matriculaRepository.findBecadosIntencionMatricula(idSeccion)).thenReturn(Collections.emptyList());
 
         // Act
-        List<BecadoIntencionMatriculaResponse> result = matriculaService.getBecadosSeccion(idSeccion);
+        SeccionBecadosResponse result = matriculaService.getBecadosSeccion(idSeccion);
 
         // Assert
-        assertThat(result).isNotNull().isEmpty();
+        assertThat(result).isNotNull();
+        assertThat(result.getBecados()).isEmpty();
+        assertThat(result.getVacantesDisponibles()).isEqualTo(20);
     }
 
     static class RealProjection implements SeccionIntencionProjection {
@@ -445,14 +461,14 @@ class MatriculaServiceTest {
     }
 
     static class RealBecadoProjection implements BecadoIntencionProjection {
-        private final Integer idPostulacion;
+        private final Integer idMatricula;
         private final String nombreCompleto;
         private final String codigo;
         private final Double promedioGeneral;
         private final EstadoMatricula estadoMatricula;
 
-        public RealBecadoProjection(Integer idPostulacion, String nombreCompleto, String codigo, Double promedioGeneral, EstadoMatricula estadoMatricula) {
-            this.idPostulacion = idPostulacion;
+        public RealBecadoProjection(Integer idMatricula, String nombreCompleto, String codigo, Double promedioGeneral, EstadoMatricula estadoMatricula) {
+            this.idMatricula = idMatricula;
             this.nombreCompleto = nombreCompleto;
             this.codigo = codigo;
             this.promedioGeneral = promedioGeneral;
@@ -460,7 +476,7 @@ class MatriculaServiceTest {
         }
 
         @Override
-        public Integer getIdPostulacion() { return idPostulacion; }
+        public Integer getIdMatricula() { return idMatricula; }
 
         @Override
         public String getNombreCompleto() { return nombreCompleto; }

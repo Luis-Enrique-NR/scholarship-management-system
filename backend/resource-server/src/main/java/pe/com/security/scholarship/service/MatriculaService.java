@@ -15,6 +15,7 @@ import pe.com.security.scholarship.dto.response.BecadoIntencionMatriculaResponse
 import pe.com.security.scholarship.dto.response.CursoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.IntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredMatriculaResponse;
+import pe.com.security.scholarship.dto.response.SeccionBecadosResponse;
 import pe.com.security.scholarship.dto.response.SeccionIntencionMatriculaResponse;
 import pe.com.security.scholarship.exception.BadRequestException;
 import pe.com.security.scholarship.exception.NotFoundException;
@@ -134,13 +135,16 @@ public class MatriculaService {
   }
 
   @Transactional(readOnly = true)
-  public List<BecadoIntencionMatriculaResponse> getBecadosSeccion(Integer idSeccion) {
-    if (!seccionRepository.existsById(idSeccion)) {
-      throw new NotFoundException("No se encontró la sección con el ID enviado");
-    }
+  public SeccionBecadosResponse getBecadosSeccion(Integer idSeccion) {
+    Seccion seccion = seccionRepository.findById(idSeccion)
+            .orElseThrow(() -> new NotFoundException("No se encontró la sección con el ID enviado"));
 
-    return matriculaRepository.findBecadosIntencionMatricula(idSeccion).stream()
+    int vacantesDisponibles = seccionRepository.getVacantesRestantes(idSeccion);
+
+    List<BecadoIntencionMatriculaResponse> becados = matriculaRepository.findBecadosIntencionMatricula(idSeccion).stream()
             .map(MatriculaMapper::mapBecadoIntencionMatricula)
             .toList();
+
+    return MatriculaMapper.mapSeccionBecados(seccion, vacantesDisponibles, becados);
   }
 }

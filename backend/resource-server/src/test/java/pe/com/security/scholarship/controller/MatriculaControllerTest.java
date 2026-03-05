@@ -15,6 +15,7 @@ import pe.com.security.scholarship.dto.response.BecadoIntencionMatriculaResponse
 import pe.com.security.scholarship.dto.response.CursoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.IntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredMatriculaResponse;
+import pe.com.security.scholarship.dto.response.SeccionBecadosResponse;
 import pe.com.security.scholarship.dto.response.SeccionIntencionMatriculaResponse;
 import pe.com.security.scholarship.exception.NotFoundException;
 import pe.com.security.scholarship.service.MatriculaService;
@@ -201,14 +202,22 @@ class MatriculaControllerTest {
         // Arrange
         Integer idSeccion = 101;
         BecadoIntencionMatriculaResponse becadoResponse = BecadoIntencionMatriculaResponse.builder()
-                .idPostulacion(1)
+                .idMatricula(1)
                 .nombreCompleto("Juan Perez")
                 .codigo("S001")
                 .promedioGeneral(18.5)
                 .estadoMatricula(EstadoMatricula.PENDIENTE)
                 .build();
 
-        when(matriculaService.getBecadosSeccion(idSeccion)).thenReturn(List.of(becadoResponse));
+        SeccionBecadosResponse response = SeccionBecadosResponse.builder()
+                .idSeccion(idSeccion)
+                .fechaInicio(LocalDate.now().plusDays(5))
+                .vacantesTotales(20)
+                .vacantesDisponibles(15)
+                .becados(List.of(becadoResponse))
+                .build();
+
+        when(matriculaService.getBecadosSeccion(idSeccion)).thenReturn(response);
 
         // Act & Assert
         mockMvc.perform(get("/api/v1/matriculas/intenciones/{idSeccion}", idSeccion)
@@ -217,9 +226,12 @@ class MatriculaControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Consulta exitosa"))
                 .andExpect(jsonPath("$.codigo").value("200"))
-                .andExpect(jsonPath("$.data[0].idPostulacion").value(1))
-                .andExpect(jsonPath("$.data[0].nombreCompleto").value("Juan Perez"))
-                .andExpect(jsonPath("$.data[0].estadoMatricula").value("PENDIENTE"));
+                .andExpect(jsonPath("$.data.idSeccion").value(idSeccion))
+                .andExpect(jsonPath("$.data.vacantesTotales").value(20))
+                .andExpect(jsonPath("$.data.vacantesDisponibles").value(15))
+                .andExpect(jsonPath("$.data.becados[0].idMatricula").value(1))
+                .andExpect(jsonPath("$.data.becados[0].nombreCompleto").value("Juan Perez"))
+                .andExpect(jsonPath("$.data.becados[0].estadoMatricula").value("PENDIENTE"));
 
         verify(matriculaService, times(1)).getBecadosSeccion(idSeccion);
     }

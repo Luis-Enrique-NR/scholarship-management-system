@@ -13,10 +13,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import pe.com.security.scholarship.dto.request.SubmitMatriculaRequest;
-import pe.com.security.scholarship.dto.response.BecadoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.CursoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.IntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredMatriculaResponse;
+import pe.com.security.scholarship.dto.response.SeccionBecadosResponse;
 import pe.com.security.scholarship.service.MatriculaService;
 import pe.com.security.scholarship.util.ApiResponse;
 
@@ -62,10 +62,10 @@ public class MatriculaController {
   @PreAuthorize("hasRole('TRAINING_CENTER_SECRETARY')")
   @Operation(summary = "Consulta de becados con intenciones de matrícula por determinada sección",
           description = "Obtener la lista de becados con datos personales e información de su intención de matrícula")
-  public ResponseEntity<ApiResponse<List<BecadoIntencionMatriculaResponse>>> getBecadosIntencion(
+  public ResponseEntity<ApiResponse<SeccionBecadosResponse>> getBecadosIntencion(
           @PathVariable Integer idSeccion
   ) {
-    List<BecadoIntencionMatriculaResponse> responses = matriculaService.getBecadosSeccion(idSeccion);
+    SeccionBecadosResponse responses = matriculaService.getBecadosSeccion(idSeccion);
     return ResponseEntity.ok(new ApiResponse<>("Consulta exitosa", "200", responses));
   }
 }

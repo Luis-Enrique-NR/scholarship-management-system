@@ -72,7 +72,7 @@ public interface MatriculaRepository extends JpaRepository<Matricula, Integer> {
 
   @Query(value = """
           select
-          	m.id_postulacion as idPostulacion,
+          	m.id as idMatricula,
           	CONCAT(u.nombres, ' ', u.apellidos) as nombreCompleto,
           	e.codigo_estudiante as codigo,
           	p.promedio_general as promedioGeneral,

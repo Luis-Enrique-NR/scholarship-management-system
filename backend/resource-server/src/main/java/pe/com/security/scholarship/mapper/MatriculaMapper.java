@@ -12,11 +12,13 @@ import pe.com.security.scholarship.dto.response.CursoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.DetalleHorarioMatriculaResponse;
 import pe.com.security.scholarship.dto.response.IntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredMatriculaResponse;
+import pe.com.security.scholarship.dto.response.SeccionBecadosResponse;
 import pe.com.security.scholarship.dto.response.SeccionIntencionMatriculaResponse;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 
 public class MatriculaMapper {
 
@@ -82,11 +84,22 @@ public class MatriculaMapper {
 
   public static BecadoIntencionMatriculaResponse mapBecadoIntencionMatricula(BecadoIntencionProjection projection) {
     return BecadoIntencionMatriculaResponse.builder()
-            .idPostulacion(projection.getIdPostulacion())
+            .idMatricula(projection.getIdMatricula())
             .nombreCompleto(projection.getNombreCompleto())
             .codigo(projection.getCodigo())
             .promedioGeneral(projection.getPromedioGeneral())
             .estadoMatricula(projection.getEstadoMatricula())
+            .build();
+  }
+
+  public static SeccionBecadosResponse mapSeccionBecados(Seccion seccion, Integer vacantesDisponibles,
+                                                         List<BecadoIntencionMatriculaResponse> becados) {
+    return SeccionBecadosResponse.builder()
+            .idSeccion(seccion.getId())
+            .fechaInicio(seccion.getFechaInicio())
+            .vacantesTotales(seccion.getVacantesDisponibles())
+            .vacantesDisponibles(vacantesDisponibles)
+            .becados(becados)
             .build();
   }
 }
