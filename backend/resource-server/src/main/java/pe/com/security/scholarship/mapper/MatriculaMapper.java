@@ -5,13 +5,20 @@ import pe.com.security.scholarship.domain.entity.Matricula;
 import pe.com.security.scholarship.domain.entity.Postulacion;
 import pe.com.security.scholarship.domain.entity.Seccion;
 import pe.com.security.scholarship.domain.enums.EstadoMatricula;
+import pe.com.security.scholarship.dto.projection.BecadoIntencionProjection;
+import pe.com.security.scholarship.dto.projection.SeccionIntencionProjection;
+import pe.com.security.scholarship.dto.response.BecadoIntencionMatriculaResponse;
+import pe.com.security.scholarship.dto.response.CursoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.DetalleHorarioMatriculaResponse;
 import pe.com.security.scholarship.dto.response.IntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredMatriculaResponse;
+import pe.com.security.scholarship.dto.response.SeccionBecadosResponse;
+import pe.com.security.scholarship.dto.response.SeccionIntencionMatriculaResponse;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 
 public class MatriculaMapper {
 
@@ -56,6 +63,43 @@ public class MatriculaMapper {
                     : null)
             .notaMatricula(matricula.getNota())
             .updatedAt(matricula.getUpdatedAt())
+            .build();
+  }
+
+  public static SeccionIntencionMatriculaResponse mapSeccionIntencionMatricula(SeccionIntencionProjection projection) {
+    return SeccionIntencionMatriculaResponse.builder()
+            .idSeccion(projection.getIdSeccion())
+            .fechaInicio(projection.getFechaInicio())
+            .totalIntencionesPendientes(projection.getTotalIntencionesPendientes())
+            .build();
+  }
+
+  public static CursoIntencionMatriculaResponse mapCursoIntencionMatricula(SeccionIntencionProjection p) {
+    return CursoIntencionMatriculaResponse.builder()
+            .idCurso(p.getIdCurso())
+            .nombreCurso(p.getNombreCurso())
+            .codigoCurso(p.getCodigoCurso())
+            .build();
+  }
+
+  public static BecadoIntencionMatriculaResponse mapBecadoIntencionMatricula(BecadoIntencionProjection projection) {
+    return BecadoIntencionMatriculaResponse.builder()
+            .idMatricula(projection.getIdMatricula())
+            .nombreCompleto(projection.getNombreCompleto())
+            .codigo(projection.getCodigo())
+            .promedioGeneral(projection.getPromedioGeneral())
+            .estadoMatricula(projection.getEstadoMatricula())
+            .build();
+  }
+
+  public static SeccionBecadosResponse mapSeccionBecados(Seccion seccion, Integer vacantesDisponibles,
+                                                         List<BecadoIntencionMatriculaResponse> becados) {
+    return SeccionBecadosResponse.builder()
+            .idSeccion(seccion.getId())
+            .fechaInicio(seccion.getFechaInicio())
+            .vacantesTotales(seccion.getVacantesDisponibles())
+            .vacantesDisponibles(vacantesDisponibles)
+            .becados(becados)
             .build();
   }
 }

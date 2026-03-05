@@ -1,6 +1,7 @@
 package pe.com.security.scholarship.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
@@ -131,16 +132,23 @@ public class ConvocatoriaService {
 
   // Tareas programadas: Actualizar el estado de las convocatorias a media noche
 
+  @Scheduled(cron = "0 0 0 * * *")
+  public void ejecutarCron() {
+    System.out.println("Iniciando cron de actualización...");
+    try {
+      actualizarEstadosConvocatorias();
+    } catch (Exception e) {
+      System.out.println("El cron falló definitivamente tras los reintentos");
+    }
+  }
+
   @Transactional
-  @Scheduled(cron = "0 0 0 * * *") // "0 0 0 * * *" para 1 hora, "0 0/15 * * * *" para 15 min
   @Retryable(
-          retryFor = { TransactionSystemException.class },
+          retryFor = { TransactionSystemException.class, DataAccessException.class },
           maxAttempts = 5,
           backoff = @Backoff(delay = 300000) // 5 minutos
   )
   public void actualizarEstadosConvocatorias() {
-    System.out.println("Iniciando cron de actualización de convocatorias...");
-
     int aperturadas = convocatoriaRepository.aperturarConvocatoriasVigentes(LocalDate.now());
     int cerradas = convocatoriaRepository.cerrarConvocatoriasExpiradas(LocalDate.now());
 

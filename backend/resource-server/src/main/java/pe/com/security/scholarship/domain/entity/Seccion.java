@@ -45,6 +45,8 @@ public class Seccion {
   @JoinColumn(name = "id_curso", nullable = false)
   private Curso curso;
 
+  private Integer vacantesDisponibles;
+
   @CreatedDate
   @Column(nullable = false, updatable = false)
   private Instant createdAt;

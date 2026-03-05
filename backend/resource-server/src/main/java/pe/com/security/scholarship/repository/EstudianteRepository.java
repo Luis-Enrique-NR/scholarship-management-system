@@ -19,7 +19,7 @@ public interface EstudianteRepository extends JpaRepository<Estudiante, UUID> {
 
   @Query(value = """
         SELECT
-            e.codigo_estudiante as codigo,
+            e.codigo_estudiante as codigoEstudiante,
             CONCAT(u.nombres, ' ', u.apellidos) as nombreCompleto
         FROM estudiantes e
         INNER JOIN usuarios u ON u.id = e.id_usuario
