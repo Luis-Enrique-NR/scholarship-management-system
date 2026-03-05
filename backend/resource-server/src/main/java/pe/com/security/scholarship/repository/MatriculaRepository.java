@@ -8,10 +8,8 @@ import org.springframework.data.repository.query.Param;
 import pe.com.security.scholarship.domain.entity.Matricula;
 import pe.com.security.scholarship.dto.projection.BecadoIntencionProjection;
 import pe.com.security.scholarship.dto.projection.SeccionIntencionProjection;
-import pe.com.security.scholarship.dto.response.BecadoIntencionMatriculaResponse;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 public interface MatriculaRepository extends JpaRepository<Matricula, Integer> {

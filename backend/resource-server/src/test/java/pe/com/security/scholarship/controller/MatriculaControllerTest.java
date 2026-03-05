@@ -10,6 +10,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import pe.com.security.scholarship.config.ResourceServerTest;
 import pe.com.security.scholarship.domain.enums.EstadoMatricula;
+import pe.com.security.scholarship.dto.request.AprobarMatriculaRequest;
 import pe.com.security.scholarship.dto.request.SubmitMatriculaRequest;
 import pe.com.security.scholarship.dto.response.BecadoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.CursoIntencionMatriculaResponse;
@@ -17,6 +18,7 @@ import pe.com.security.scholarship.dto.response.IntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.RegisteredMatriculaResponse;
 import pe.com.security.scholarship.dto.response.SeccionBecadosResponse;
 import pe.com.security.scholarship.dto.response.SeccionIntencionMatriculaResponse;
+import pe.com.security.scholarship.exception.BadRequestException;
 import pe.com.security.scholarship.exception.NotFoundException;
 import pe.com.security.scholarship.service.MatriculaService;
 
@@ -24,12 +26,14 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -265,5 +269,87 @@ class MatriculaControllerTest {
                 .andExpect(status().isForbidden());
 
         verify(matriculaService, times(0)).getBecadosSeccion(idSeccion);
+    }
+
+    @Test
+    void actualizarEstadoMatricula_ShouldReturnOk_WhenRequestIsValid() throws Exception {
+        // Arrange
+        AprobarMatriculaRequest request = new AprobarMatriculaRequest();
+        request.setIdMatricula(1);
+        request.setAprobado(true);
+
+        // Act & Assert
+        mockMvc.perform(patch("/api/v1/matriculas")
+                        .with(csrf())
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_TRAINING_CENTER_SECRETARY")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Actualización exitosa"))
+                .andExpect(jsonPath("$.codigo").value("200"));
+
+        verify(matriculaService, times(1)).actualizarEstadoMatricula(any(AprobarMatriculaRequest.class));
+    }
+
+    @Test
+    void actualizarEstadoMatricula_ShouldReturnBadRequest_WhenServiceThrowsBadRequest() throws Exception {
+        // Arrange
+        AprobarMatriculaRequest request = new AprobarMatriculaRequest();
+        request.setIdMatricula(1);
+        request.setAprobado(true);
+
+        doThrow(new BadRequestException("No se puede repetir el mismo estado"))
+                .when(matriculaService).actualizarEstadoMatricula(any(AprobarMatriculaRequest.class));
+
+        // Act & Assert
+        mockMvc.perform(patch("/api/v1/matriculas")
+                        .with(csrf())
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_TRAINING_CENTER_SECRETARY")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("No se puede repetir el mismo estado"));
+
+        verify(matriculaService, times(1)).actualizarEstadoMatricula(any(AprobarMatriculaRequest.class));
+    }
+
+    @Test
+    void actualizarEstadoMatricula_ShouldReturnNotFound_WhenServiceThrowsNotFound() throws Exception {
+        // Arrange
+        AprobarMatriculaRequest request = new AprobarMatriculaRequest();
+        request.setIdMatricula(999);
+        request.setAprobado(true);
+
+        doThrow(new NotFoundException("No se encontró la matrícula con el ID enviado"))
+                .when(matriculaService).actualizarEstadoMatricula(any(AprobarMatriculaRequest.class));
+
+        // Act & Assert
+        mockMvc.perform(patch("/api/v1/matriculas")
+                        .with(csrf())
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_TRAINING_CENTER_SECRETARY")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("No se encontró la matrícula con el ID enviado"));
+
+        verify(matriculaService, times(1)).actualizarEstadoMatricula(any(AprobarMatriculaRequest.class));
+    }
+
+    @Test
+    void actualizarEstadoMatricula_ShouldReturnForbidden_WhenRoleIsInvalid() throws Exception {
+        // Arrange
+        AprobarMatriculaRequest request = new AprobarMatriculaRequest();
+        request.setIdMatricula(1);
+        request.setAprobado(true);
+
+        // Act & Assert
+        mockMvc.perform(patch("/api/v1/matriculas")
+                        .with(csrf())
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_STUDENT")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden());
+
+        verify(matriculaService, times(0)).actualizarEstadoMatricula(any(AprobarMatriculaRequest.class));
     }
 }

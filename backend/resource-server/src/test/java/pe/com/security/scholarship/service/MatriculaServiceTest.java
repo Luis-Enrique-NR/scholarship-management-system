@@ -9,6 +9,7 @@ import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Limit;
 import pe.com.security.scholarship.domain.entity.Curso;
+import pe.com.security.scholarship.domain.entity.Empleado;
 import pe.com.security.scholarship.domain.entity.Estudiante;
 import pe.com.security.scholarship.domain.entity.Matricula;
 import pe.com.security.scholarship.domain.entity.Postulacion;
@@ -16,6 +17,7 @@ import pe.com.security.scholarship.domain.entity.Seccion;
 import pe.com.security.scholarship.domain.enums.EstadoMatricula;
 import pe.com.security.scholarship.dto.projection.BecadoIntencionProjection;
 import pe.com.security.scholarship.dto.projection.SeccionIntencionProjection;
+import pe.com.security.scholarship.dto.request.AprobarMatriculaRequest;
 import pe.com.security.scholarship.dto.request.SubmitMatriculaRequest;
 import pe.com.security.scholarship.dto.response.CursoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.IntencionMatriculaResponse;
@@ -24,6 +26,7 @@ import pe.com.security.scholarship.dto.response.SeccionBecadosResponse;
 import pe.com.security.scholarship.exception.BadRequestException;
 import pe.com.security.scholarship.exception.NotFoundException;
 import pe.com.security.scholarship.repository.CursoRepository;
+import pe.com.security.scholarship.repository.EmpleadoRepository;
 import pe.com.security.scholarship.repository.EstudianteRepository;
 import pe.com.security.scholarship.repository.MatriculaRepository;
 import pe.com.security.scholarship.repository.PostulacionRepository;
@@ -62,6 +65,8 @@ class MatriculaServiceTest {
     private MatriculaRepository matriculaRepository;
     @Mock
     private PostulacionService postulacionService;
+    @Mock
+    private EmpleadoRepository empleadoRepository;
 
     @InjectMocks
     private MatriculaService matriculaService;
@@ -422,6 +427,165 @@ class MatriculaServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getBecados()).isEmpty();
         assertThat(result.getVacantesDisponibles()).isEqualTo(20);
+    }
+
+    @Test
+    void actualizarEstadoMatricula_ShouldApprove_WhenValidRequest() {
+        // Arrange
+        UUID idUsuario = UUID.randomUUID();
+        Integer idMatricula = 1;
+        AprobarMatriculaRequest request = new AprobarMatriculaRequest();
+        request.setIdMatricula(idMatricula);
+        request.setAprobado(true);
+
+        Empleado empleado = new Empleado();
+        empleado.setId(UUID.randomUUID());
+
+        Matricula matricula = new Matricula();
+        matricula.setId(idMatricula);
+        matricula.setEstado(EstadoMatricula.PENDIENTE);
+
+        try (MockedStatic<SecurityUtils> securityUtilsMock = mockStatic(SecurityUtils.class)) {
+            securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
+
+            when(empleadoRepository.findByIdUsuario(idUsuario)).thenReturn(Optional.of(empleado));
+            when(matriculaRepository.findById(idMatricula)).thenReturn(Optional.of(matricula));
+
+            // Act
+            matriculaService.actualizarEstadoMatricula(request);
+
+            // Assert
+            assertThat(matricula.getEstado()).isEqualTo(EstadoMatricula.ACEPTADO);
+            assertThat(matricula.getFechaMatricula()).isNotNull();
+            assertThat(matricula.getEmpleado()).isEqualTo(empleado);
+        }
+    }
+
+    @Test
+    void actualizarEstadoMatricula_ShouldReject_WhenValidRequest() {
+        // Arrange
+        UUID idUsuario = UUID.randomUUID();
+        Integer idMatricula = 1;
+        AprobarMatriculaRequest request = new AprobarMatriculaRequest();
+        request.setIdMatricula(idMatricula);
+        request.setAprobado(false);
+
+        Empleado empleado = new Empleado();
+        empleado.setId(UUID.randomUUID());
+
+        Matricula matricula = new Matricula();
+        matricula.setId(idMatricula);
+        matricula.setEstado(EstadoMatricula.PENDIENTE);
+
+        try (MockedStatic<SecurityUtils> securityUtilsMock = mockStatic(SecurityUtils.class)) {
+            securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
+
+            when(empleadoRepository.findByIdUsuario(idUsuario)).thenReturn(Optional.of(empleado));
+            when(matriculaRepository.findById(idMatricula)).thenReturn(Optional.of(matricula));
+
+            // Act
+            matriculaService.actualizarEstadoMatricula(request);
+
+            // Assert
+            assertThat(matricula.getEstado()).isEqualTo(EstadoMatricula.RECHAZADO);
+            assertThat(matricula.getFechaMatricula()).isNull();
+            assertThat(matricula.getEmpleado()).isEqualTo(empleado);
+        }
+    }
+
+    @Test
+    void actualizarEstadoMatricula_ShouldThrowBadRequest_WhenStateIsRepeated() {
+        // Arrange
+        UUID idUsuario = UUID.randomUUID();
+        Integer idMatricula = 1;
+        AprobarMatriculaRequest request = new AprobarMatriculaRequest();
+        request.setIdMatricula(idMatricula);
+        request.setAprobado(true);
+
+        Empleado empleado = new Empleado();
+        Matricula matricula = new Matricula();
+        matricula.setId(idMatricula);
+        matricula.setEstado(EstadoMatricula.ACEPTADO);
+
+        try (MockedStatic<SecurityUtils> securityUtilsMock = mockStatic(SecurityUtils.class)) {
+            securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
+
+            when(empleadoRepository.findByIdUsuario(idUsuario)).thenReturn(Optional.of(empleado));
+            when(matriculaRepository.findById(idMatricula)).thenReturn(Optional.of(matricula));
+
+            // Act & Assert
+            assertThatThrownBy(() -> matriculaService.actualizarEstadoMatricula(request))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasMessage("No se puede repetir el mismo estado");
+        }
+    }
+
+    @Test
+    void actualizarEstadoMatricula_ShouldThrowBadRequest_WhenRejectingApprovedMatricula() {
+        // Arrange
+        UUID idUsuario = UUID.randomUUID();
+        Integer idMatricula = 1;
+        AprobarMatriculaRequest request = new AprobarMatriculaRequest();
+        request.setIdMatricula(idMatricula);
+        request.setAprobado(false);
+
+        Empleado empleado = new Empleado();
+        Matricula matricula = new Matricula();
+        matricula.setId(idMatricula);
+        matricula.setEstado(EstadoMatricula.ACEPTADO);
+
+        try (MockedStatic<SecurityUtils> securityUtilsMock = mockStatic(SecurityUtils.class)) {
+            securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
+
+            when(empleadoRepository.findByIdUsuario(idUsuario)).thenReturn(Optional.of(empleado));
+            when(matriculaRepository.findById(idMatricula)).thenReturn(Optional.of(matricula));
+
+            // Act & Assert
+            assertThatThrownBy(() -> matriculaService.actualizarEstadoMatricula(request))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasMessage("No se puede rechazar una matrícula ya aprobada");
+        }
+    }
+
+    @Test
+    void actualizarEstadoMatricula_ShouldThrowNotFound_WhenEmployeeNotFound() {
+        // Arrange
+        UUID idUsuario = UUID.randomUUID();
+        AprobarMatriculaRequest request = new AprobarMatriculaRequest();
+
+        try (MockedStatic<SecurityUtils> securityUtilsMock = mockStatic(SecurityUtils.class)) {
+            securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
+
+            when(empleadoRepository.findByIdUsuario(idUsuario)).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(() -> matriculaService.actualizarEstadoMatricula(request))
+                    .isInstanceOf(NotFoundException.class)
+                    .hasMessage("No se encontró empleado con el ID del payload");
+        }
+    }
+
+    @Test
+    void actualizarEstadoMatricula_ShouldThrowNotFound_WhenMatriculaNotFound() {
+        // Arrange
+        UUID idUsuario = UUID.randomUUID();
+        Integer idMatricula = 1;
+        AprobarMatriculaRequest request = new AprobarMatriculaRequest();
+        request.setIdMatricula(idMatricula);
+
+        Empleado empleado = new Empleado();
+
+        try (MockedStatic<SecurityUtils> securityUtilsMock = mockStatic(SecurityUtils.class)) {
+            securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
+
+            when(empleadoRepository.findByIdUsuario(idUsuario)).thenReturn(Optional.of(empleado));
+            when(matriculaRepository.findById(idMatricula)).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(() -> matriculaService.actualizarEstadoMatricula(request))
+                    .isInstanceOf(NotFoundException.class)
+                    .hasMessage("No se encontró la matrícula con el ID enviado");
+        }
     }
 
     static class RealProjection implements SeccionIntencionProjection {

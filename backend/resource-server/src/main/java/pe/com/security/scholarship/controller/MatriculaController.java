@@ -7,11 +7,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import pe.com.security.scholarship.dto.request.AprobarMatriculaRequest;
 import pe.com.security.scholarship.dto.request.SubmitMatriculaRequest;
 import pe.com.security.scholarship.dto.response.CursoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.IntencionMatriculaResponse;
@@ -67,5 +69,16 @@ public class MatriculaController {
   ) {
     SeccionBecadosResponse responses = matriculaService.getBecadosSeccion(idSeccion);
     return ResponseEntity.ok(new ApiResponse<>("Consulta exitosa", "200", responses));
+  }
+
+  @PatchMapping
+  @PreAuthorize("hasRole('TRAINING_CENTER_SECRETARY')")
+  @Operation(summary = "Actualización del estado de una intención de matrícula",
+          description = "Aprobar o rechazar una intención de matrícula seleccionada")
+  public ResponseEntity<ApiResponse<String>> actualizarEstadoMatricula(
+          @Valid @RequestBody AprobarMatriculaRequest request
+  ) {
+    matriculaService.actualizarEstadoMatricula(request);
+    return ResponseEntity.ok(new ApiResponse<>("Actualización exitosa", "200", null));
   }
 }

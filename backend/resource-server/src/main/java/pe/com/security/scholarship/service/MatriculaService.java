@@ -5,11 +5,14 @@ import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.com.security.scholarship.domain.entity.Curso;
+import pe.com.security.scholarship.domain.entity.Empleado;
 import pe.com.security.scholarship.domain.entity.Estudiante;
 import pe.com.security.scholarship.domain.entity.Matricula;
 import pe.com.security.scholarship.domain.entity.Postulacion;
 import pe.com.security.scholarship.domain.entity.Seccion;
+import pe.com.security.scholarship.domain.enums.EstadoMatricula;
 import pe.com.security.scholarship.dto.projection.SeccionIntencionProjection;
+import pe.com.security.scholarship.dto.request.AprobarMatriculaRequest;
 import pe.com.security.scholarship.dto.request.SubmitMatriculaRequest;
 import pe.com.security.scholarship.dto.response.BecadoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.CursoIntencionMatriculaResponse;
@@ -21,12 +24,14 @@ import pe.com.security.scholarship.exception.BadRequestException;
 import pe.com.security.scholarship.exception.NotFoundException;
 import pe.com.security.scholarship.mapper.MatriculaMapper;
 import pe.com.security.scholarship.repository.CursoRepository;
+import pe.com.security.scholarship.repository.EmpleadoRepository;
 import pe.com.security.scholarship.repository.EstudianteRepository;
 import pe.com.security.scholarship.repository.MatriculaRepository;
 import pe.com.security.scholarship.repository.PostulacionRepository;
 import pe.com.security.scholarship.repository.SeccionRepository;
 import pe.com.security.scholarship.util.SecurityUtils;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.Comparator;
@@ -44,6 +49,7 @@ public class MatriculaService {
   private final CursoRepository cursoRepository;
   private final SeccionRepository seccionRepository;
   private final MatriculaRepository matriculaRepository;
+  private final EmpleadoRepository empleadoRepository;
   private final PostulacionService postulacionService;
 
   @Transactional
@@ -146,5 +152,31 @@ public class MatriculaService {
             .toList();
 
     return MatriculaMapper.mapSeccionBecados(seccion, vacantesDisponibles, becados);
+  }
+
+  @Transactional
+  public void actualizarEstadoMatricula(AprobarMatriculaRequest request) {
+    UUID idUsuario = SecurityUtils.getCurrentUserId();
+    Empleado empleado = empleadoRepository.findByIdUsuario(idUsuario)
+            .orElseThrow(() -> new NotFoundException("No se encontró empleado con el ID del payload"));
+
+    Matricula matricula = matriculaRepository.findById(request.getIdMatricula())
+            .orElseThrow(() -> new NotFoundException("No se encontró la matrícula con el ID enviado"));
+
+    // Evitar repetir el mismo estado
+    if (matricula.getEstado() == (request.getAprobado() ? EstadoMatricula.ACEPTADO : EstadoMatricula.RECHAZADO)) {
+      throw new BadRequestException("No se puede repetir el mismo estado");
+    }
+
+    // No se puede rechazar una matrícula ya aprobada
+    if (matricula.getEstado() == EstadoMatricula.ACEPTADO) {
+      throw new BadRequestException("No se puede rechazar una matrícula ya aprobada");
+    }
+
+    matricula.setEmpleado(empleado);
+
+    matricula.setFechaMatricula(request.getAprobado() ? Instant.now() : null);
+
+    matricula.setEstado(request.getAprobado() ? EstadoMatricula.ACEPTADO : EstadoMatricula.RECHAZADO);
   }
 }
