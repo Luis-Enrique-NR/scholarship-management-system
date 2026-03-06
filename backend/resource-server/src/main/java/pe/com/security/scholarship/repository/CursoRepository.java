@@ -13,4 +13,6 @@ public interface CursoRepository extends JpaRepository<Curso, Integer> {
 
   @Query("SELECT DISTINCT c FROM Curso c JOIN FETCH c.secciones s JOIN c.postulaciones p WHERE p.id = :idPostulacion")
   List<Curso> findByIdPostulacion(@Param("idPostulacion") Integer idPostulacion);
+
+  boolean existsByCodigo(String codigo);
 }
