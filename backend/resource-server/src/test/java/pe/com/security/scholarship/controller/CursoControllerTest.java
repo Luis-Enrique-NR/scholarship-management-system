@@ -4,6 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -14,6 +18,7 @@ import pe.com.security.scholarship.domain.enums.ModalidadCurso;
 import pe.com.security.scholarship.dto.request.RegisterCursoRequest;
 import pe.com.security.scholarship.dto.request.RegisterHorarioSeccionRequest;
 import pe.com.security.scholarship.dto.request.RegisterSeccionRequest;
+import pe.com.security.scholarship.dto.response.OverviewCursoResponse;
 import pe.com.security.scholarship.dto.response.RegisteredCursoResponse;
 import pe.com.security.scholarship.dto.response.RegisteredSeccionResponse;
 import pe.com.security.scholarship.exception.BadRequestException;
@@ -25,11 +30,14 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -194,5 +202,143 @@ class CursoControllerTest {
                 .andExpect(status().isForbidden());
 
         verify(cursoService, times(0)).register(any(RegisterCursoRequest.class));
+    }
+
+    @Test
+    void getCatalogo_ShouldReturnOk_WhenDefaultParameters() throws Exception {
+        // Arrange
+        OverviewCursoResponse curso = OverviewCursoResponse.builder()
+                .id(1)
+                .nombre("Curso Test")
+                .codigo("C001")
+                .modalidad(ModalidadCurso.ONLINE)
+                .build();
+        PageImpl<OverviewCursoResponse> page = new PageImpl<>(Collections.singletonList(curso));
+
+        when(cursoService.getCatalogo(any(Pageable.class))).thenReturn(page);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/cursos")
+                        .with(anonymous())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Consulta exitosa"))
+                .andExpect(jsonPath("$.codigo").value("200"))
+                .andExpect(jsonPath("$.data.content[0].nombre").value("Curso Test"))
+                .andExpect(jsonPath("$.data.totalElements").value(1));
+
+        verify(cursoService).getCatalogo(eq(PageRequest.of(0, 10, Sort.by("nombre").ascending())));
+    }
+
+    @Test
+    void getCatalogo_ShouldReturnOk_WhenCustomParameters() throws Exception {
+        // Arrange
+        OverviewCursoResponse curso = OverviewCursoResponse.builder()
+                .id(1)
+                .nombre("Curso Test")
+                .codigo("C001")
+                .modalidad(ModalidadCurso.ONLINE)
+                .build();
+        PageImpl<OverviewCursoResponse> page = new PageImpl<>(Collections.singletonList(curso));
+
+        when(cursoService.getCatalogo(any(Pageable.class))).thenReturn(page);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/cursos")
+                        .param("page", "1")
+                        .param("size", "5")
+                        .param("sort", "modalidad,desc")
+                        .with(anonymous())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Consulta exitosa"))
+                .andExpect(jsonPath("$.codigo").value("200"))
+                .andExpect(jsonPath("$.data.content[0].nombre").value("Curso Test"));
+
+        verify(cursoService).getCatalogo(eq(PageRequest.of(1, 5, Sort.by("modalidad").descending())));
+    }
+
+    @Test
+    void getCatalogo_ShouldReturnBadRequest_WhenSortIsInvalid() throws Exception {
+        // Arrange
+        when(cursoService.getCatalogo(any(Pageable.class)))
+                .thenThrow(new BadRequestException("Campo de ordenamiento no permitido: fechaCreacion"));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/cursos")
+                        .param("sort", "fechaCreacion,asc")
+                        .with(anonymous())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Campo de ordenamiento no permitido: fechaCreacion"));
+    }
+
+    @Test
+    void getHorarios_ShouldReturnOk_WhenDefaultParameters() throws Exception {
+        // Arrange
+        OverviewCursoResponse curso = OverviewCursoResponse.builder()
+                .id(1)
+                .nombre("Curso Horario")
+                .codigo("C002")
+                .modalidad(ModalidadCurso.PRESENCIAL)
+                .build();
+        PageImpl<OverviewCursoResponse> page = new PageImpl<>(Collections.singletonList(curso));
+
+        when(cursoService.getHorarios(any(Pageable.class))).thenReturn(page);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/cursos/horarios")
+                        .with(anonymous())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Consulta exitosa"))
+                .andExpect(jsonPath("$.codigo").value("200"))
+                .andExpect(jsonPath("$.data.content[0].nombre").value("Curso Horario"))
+                .andExpect(jsonPath("$.data.totalElements").value(1));
+
+        verify(cursoService).getHorarios(eq(PageRequest.of(0, 10, Sort.by("nombre").ascending())));
+    }
+
+    @Test
+    void getHorarios_ShouldReturnOk_WhenCustomParameters() throws Exception {
+        // Arrange
+        OverviewCursoResponse curso = OverviewCursoResponse.builder()
+                .id(1)
+                .nombre("Curso Horario")
+                .codigo("C002")
+                .modalidad(ModalidadCurso.PRESENCIAL)
+                .build();
+        PageImpl<OverviewCursoResponse> page = new PageImpl<>(Collections.singletonList(curso));
+
+        when(cursoService.getHorarios(any(Pageable.class))).thenReturn(page);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/cursos/horarios")
+                        .param("page", "1")
+                        .param("size", "5")
+                        .param("sort", "modalidad,desc")
+                        .with(anonymous())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Consulta exitosa"))
+                .andExpect(jsonPath("$.codigo").value("200"))
+                .andExpect(jsonPath("$.data.content[0].nombre").value("Curso Horario"));
+
+        verify(cursoService).getHorarios(eq(PageRequest.of(1, 5, Sort.by("modalidad").descending())));
+    }
+
+    @Test
+    void getHorarios_ShouldReturnBadRequest_WhenSortIsInvalid() throws Exception {
+        // Arrange
+        when(cursoService.getHorarios(any(Pageable.class)))
+                .thenThrow(new BadRequestException("Campo de ordenamiento no permitido: fechaCreacion"));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/cursos/horarios")
+                        .param("sort", "fechaCreacion,asc")
+                        .with(anonymous())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Campo de ordenamiento no permitido: fechaCreacion"));
     }
 }

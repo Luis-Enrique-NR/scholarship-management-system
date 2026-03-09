@@ -2,11 +2,13 @@ package pe.com.security.scholarship.mapper;
 
 import pe.com.security.scholarship.domain.entity.Curso;
 import pe.com.security.scholarship.domain.entity.Seccion;
+import pe.com.security.scholarship.dto.response.OverviewSeccionResponse;
 import pe.com.security.scholarship.dto.response.RegisteredSeccionResponse;
 import pe.com.security.scholarship.dto.response.UpdatedVacantesSeccionResponse;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.stream.Collectors;
 
 public class SeccionMapper {
 
@@ -34,6 +36,18 @@ public class SeccionMapper {
     return UpdatedVacantesSeccionResponse.builder()
             .cantidadNuevosMatriculados(cantidadNuevosMatriculados)
             .totalMatriculados(totalMatriculados)
+            .build();
+  }
+
+  public static OverviewSeccionResponse mapOverviewSeccion(Seccion seccion) {
+    String horarios = seccion.getHorarios().stream()
+            .map(h -> String.format("%s %s-%s", h.getDiaSemana(), h.getHoraInicio(), h.getHoraFin()))
+            .collect(Collectors.joining(", "));
+
+    return OverviewSeccionResponse.builder()
+            .id(seccion.getId())
+            .horario(horarios)
+            .fechaInicio(seccion.getFechaInicio())
             .build();
   }
 }

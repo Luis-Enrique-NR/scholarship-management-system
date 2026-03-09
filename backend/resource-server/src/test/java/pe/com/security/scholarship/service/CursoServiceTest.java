@@ -5,12 +5,20 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import pe.com.security.scholarship.domain.entity.Curso;
+import pe.com.security.scholarship.domain.entity.HorarioSeccion;
+import pe.com.security.scholarship.domain.entity.Seccion;
 import pe.com.security.scholarship.domain.enums.DiaSemana;
 import pe.com.security.scholarship.domain.enums.ModalidadCurso;
 import pe.com.security.scholarship.dto.request.RegisterCursoRequest;
 import pe.com.security.scholarship.dto.request.RegisterHorarioSeccionRequest;
 import pe.com.security.scholarship.dto.request.RegisterSeccionRequest;
+import pe.com.security.scholarship.dto.response.OverviewCursoResponse;
 import pe.com.security.scholarship.dto.response.RegisteredCursoResponse;
 import pe.com.security.scholarship.exception.BadRequestException;
 import pe.com.security.scholarship.repository.CursoRepository;
@@ -19,12 +27,14 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -169,5 +179,129 @@ class CursoServiceTest {
                 .hasMessage("Cruce de horarios detectado");
 
         verify(cursoRepository, never()).save(any());
+    }
+
+    @Test
+    void getCatalogo_ShouldReturnPageOfOverviewCursoResponse_WhenSortIsValid() {
+        // Arrange
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("nombre"));
+        Curso curso = Curso.builder()
+                .id(1)
+                .nombre("Curso Test")
+                .codigo("C001")
+                .modalidad(ModalidadCurso.ONLINE)
+                .build();
+        Page<Curso> page = new PageImpl<>(Collections.singletonList(curso));
+
+        when(cursoRepository.findAll(pageable)).thenReturn(page);
+
+        // Act
+        Page<OverviewCursoResponse> result = cursoService.getCatalogo(pageable);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getNombre()).isEqualTo("Curso Test");
+        verify(cursoRepository).findAll(pageable);
+    }
+
+    @Test
+    void getCatalogo_ShouldThrowBadRequestException_WhenSortIsInvalid() {
+        // Arrange
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("fechaCreacion"));
+
+        // Act & Assert
+        assertThatThrownBy(() -> cursoService.getCatalogo(pageable))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Campo de ordenamiento no permitido");
+
+        verify(cursoRepository, never()).findAll(any(Pageable.class));
+    }
+
+    @Test
+    void getHorarios_ShouldReturnPageOfOverviewCursoResponse_WhenDataExists() {
+        // Arrange
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("nombre"));
+        LocalDate hoy = LocalDate.now();
+        List<Integer> ids = Arrays.asList(1, 2);
+        Page<Integer> idsPage = new PageImpl<>(ids, pageable, ids.size());
+
+        HorarioSeccion horario = HorarioSeccion.builder()
+                .diaSemana(DiaSemana.LUNES)
+                .horaInicio(LocalTime.of(8, 0))
+                .horaFin(LocalTime.of(10, 0))
+                .build();
+
+        Seccion seccion = Seccion.builder()
+                .id(10)
+                .fechaInicio(hoy.plusDays(1))
+                .horarios(Collections.singletonList(horario))
+                .build();
+
+        Curso curso1 = Curso.builder()
+                .id(1)
+                .nombre("Curso 1")
+                .codigo("C001")
+                .modalidad(ModalidadCurso.ONLINE)
+                .secciones(Collections.singletonList(seccion))
+                .build();
+        
+        Curso curso2 = Curso.builder()
+                .id(2)
+                .nombre("Curso 2")
+                .codigo("C002")
+                .modalidad(ModalidadCurso.PRESENCIAL)
+                .secciones(Collections.emptyList())
+                .build();
+
+        when(cursoRepository.findIdsCursosHorarios(eq(hoy), eq(pageable))).thenReturn(idsPage);
+        when(cursoRepository.findCursosSecciones(eq(ids), eq(hoy), eq(pageable.getSort())))
+                .thenReturn(Arrays.asList(curso1, curso2));
+
+        // Act
+        Page<OverviewCursoResponse> result = cursoService.getHorarios(pageable);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.getTotalElements()).isEqualTo(2);
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getContent().get(0).getNombre()).isEqualTo("Curso 1");
+        assertThat(result.getContent().get(0).getSecciones()).hasSize(1);
+        
+        verify(cursoRepository).findIdsCursosHorarios(eq(hoy), eq(pageable));
+        verify(cursoRepository).findCursosSecciones(eq(ids), eq(hoy), eq(pageable.getSort()));
+    }
+
+    @Test
+    void getHorarios_ShouldReturnEmptyPage_WhenNoDataExists() {
+        // Arrange
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("nombre"));
+        LocalDate hoy = LocalDate.now();
+        Page<Integer> idsPage = Page.empty(pageable);
+
+        when(cursoRepository.findIdsCursosHorarios(eq(hoy), eq(pageable))).thenReturn(idsPage);
+
+        // Act
+        Page<OverviewCursoResponse> result = cursoService.getHorarios(pageable);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result).isEmpty();
+        
+        verify(cursoRepository).findIdsCursosHorarios(eq(hoy), eq(pageable));
+        verify(cursoRepository, never()).findCursosSecciones(anyList(), any(LocalDate.class), any(Sort.class));
+    }
+
+    @Test
+    void getHorarios_ShouldThrowBadRequestException_WhenSortIsInvalid() {
+        // Arrange
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("fechaCreacion"));
+
+        // Act & Assert
+        assertThatThrownBy(() -> cursoService.getHorarios(pageable))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Campo de ordenamiento no permitido");
+
+        verify(cursoRepository, never()).findIdsCursosHorarios(any(LocalDate.class), any(Pageable.class));
     }
 }
