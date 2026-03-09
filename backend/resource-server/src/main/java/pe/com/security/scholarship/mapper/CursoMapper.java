@@ -1,11 +1,15 @@
 package pe.com.security.scholarship.mapper;
 
 import pe.com.security.scholarship.domain.entity.Curso;
+import pe.com.security.scholarship.domain.entity.Seccion;
 import pe.com.security.scholarship.domain.enums.ModalidadCurso;
 import pe.com.security.scholarship.dto.response.CursoPostulacionResponse;
+import pe.com.security.scholarship.dto.response.OverviewCursoResponse;
+import pe.com.security.scholarship.dto.response.OverviewSeccionResponse;
 import pe.com.security.scholarship.dto.response.RegisteredCursoResponse;
 
 import java.time.Instant;
+import java.util.List;
 
 public class CursoMapper {
 
@@ -35,6 +39,25 @@ public class CursoMapper {
             .nombre(curso.getNombre())
             .codigo(curso.getCodigo())
             .modalidad(curso.getModalidad().name())
+            .build();
+  }
+
+  public static OverviewCursoResponse mapCatalogo(Curso curso) {
+    return OverviewCursoResponse.builder()
+            .id(curso.getId())
+            .nombre(curso.getNombre())
+            .codigo(curso.getCodigo())
+            .modalidad(curso.getModalidad())
+            .build();
+  }
+
+  public static OverviewCursoResponse mapHorario(Curso curso, List<OverviewSeccionResponse> secciones) {
+    return OverviewCursoResponse.builder()
+            .id(curso.getId())
+            .nombre(curso.getNombre())
+            .codigo(curso.getCodigo())
+            .modalidad(curso.getModalidad())
+            .secciones(secciones)
             .build();
   }
 }

@@ -7,6 +7,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -33,6 +34,7 @@ public class TestSecurityConfig {
             .authorizeHttpRequests(auth -> auth
                     // Mantener las rutas públicas que definiste en tu config real
                     .requestMatchers("/api/v1/convocatorias/activa").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/cursos", "/api/v1/cursos/horarios").permitAll()
                     // El resto DEBE estar autenticado para probar @PreAuthorize
                     .anyRequest().authenticated()
             )

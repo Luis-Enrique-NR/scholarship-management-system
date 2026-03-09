@@ -17,6 +17,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -55,6 +56,7 @@ public class Seccion {
   private Instant updatedAt;
 
   @OneToMany(mappedBy = "seccion", cascade = CascadeType.ALL)
+  @BatchSize(size = 20)
   private List<HorarioSeccion> horarios;
 
   @OneToMany(mappedBy = "seccion", cascade = CascadeType.ALL)
