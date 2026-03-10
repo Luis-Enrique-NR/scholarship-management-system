@@ -8,33 +8,39 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.com.security.scholarship.domain.entity.Curso;
+import pe.com.security.scholarship.domain.entity.Estudiante;
 import pe.com.security.scholarship.domain.entity.HorarioSeccion;
+import pe.com.security.scholarship.domain.entity.Postulacion;
 import pe.com.security.scholarship.domain.entity.Seccion;
 import pe.com.security.scholarship.dto.request.RegisterCursoRequest;
 import pe.com.security.scholarship.dto.response.OverviewCursoResponse;
 import pe.com.security.scholarship.dto.response.OverviewSeccionResponse;
 import pe.com.security.scholarship.dto.response.RegisteredCursoResponse;
 import pe.com.security.scholarship.exception.BadRequestException;
+import pe.com.security.scholarship.exception.NotFoundException;
 import pe.com.security.scholarship.mapper.CursoMapper;
 import pe.com.security.scholarship.mapper.HorarioMapper;
 import pe.com.security.scholarship.mapper.SeccionMapper;
 import pe.com.security.scholarship.repository.CursoRepository;
-import pe.com.security.scholarship.repository.HorarioSeccionRepository;
-import pe.com.security.scholarship.repository.SeccionRepository;
+import pe.com.security.scholarship.repository.EstudianteRepository;
+import pe.com.security.scholarship.repository.PostulacionRepository;
+import pe.com.security.scholarship.util.SecurityUtils;
 
 import java.time.LocalDate;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class CursoService {
   private final CursoRepository cursoRepository;
-  private final SeccionRepository seccionRepository;
-  private final HorarioSeccionRepository horarioRepository;
+  private final EstudianteRepository estudianteRepository;
+  private final PostulacionRepository postulacionRepository;
+  private final PostulacionService postulacionService;
   private final SeccionService seccionService;
 
   @Transactional
@@ -92,15 +98,28 @@ public class CursoService {
     List<Curso> listaCursos = cursoRepository.findCursosSecciones(idsPage.getContent(), hoy, pageable.getSort());
 
     List<OverviewCursoResponse> contenido = listaCursos.stream()
-            .map(curso -> {
-              List<OverviewSeccionResponse> seccionesDTO = curso.getSecciones().stream()
-                      .map(SeccionMapper::mapOverviewSeccion)
-                      .toList();
-              return CursoMapper.mapHorario(curso, seccionesDTO);
-            })
+            .map(this::mapOverviewConSeccionesOrdenadas)
             .toList();
 
     return new PageImpl<>(contenido, pageable, idsPage.getTotalElements());
+  }
+
+  @Transactional(readOnly = true)
+  public List<OverviewCursoResponse> getOfertaDisponiblePorBeca() {
+    UUID idUsuario = SecurityUtils.getCurrentUserId();
+    Estudiante estudiante = estudianteRepository.findByIdUsuario(idUsuario)
+            .orElseThrow(() -> new NotFoundException("No se encontró estudiante asociado al id del payload"));
+
+    if (!postulacionService.tieneBecaActiva(estudiante.getId())) throw new BadRequestException("No tienes una beca vigente");
+
+    Postulacion postulacion = postulacionRepository.findLastPostulacion(estudiante.getId())
+            .orElseThrow(() -> new NotFoundException("No se encontró postulación para el presente año"));
+
+    List<Curso> cursosPostulacion = cursoRepository.findByIdPostulacion(postulacion.getId(), LocalDate.now());
+
+    return cursosPostulacion.stream()
+            .map(this::mapOverviewConSeccionesOrdenadas)
+            .toList();
   }
 
   // Metodos complementarios
@@ -111,6 +130,14 @@ public class CursoService {
         throw new BadRequestException("Campo de ordenamiento no permitido: " + order.getProperty());
       }
     });
+  }
+
+  private OverviewCursoResponse mapOverviewConSeccionesOrdenadas(Curso curso) {
+    List<OverviewSeccionResponse> seccionesDTO = curso.getSecciones().stream()
+            .sorted(Comparator.comparing(Seccion::getFechaInicio))
+            .map(SeccionMapper::mapOverviewSeccion)
+            .toList();
+    return CursoMapper.mapHorario(curso, seccionesDTO);
   }
 
   private static final Set<String> ORDENAMIENTOS_PERMITIDOS = Set.of("nombre", "modalidad");

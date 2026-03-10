@@ -22,6 +22,8 @@ import pe.com.security.scholarship.dto.response.RegisteredCursoResponse;
 import pe.com.security.scholarship.service.CursoService;
 import pe.com.security.scholarship.util.ApiResponse;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/cursos")
 @RequiredArgsConstructor
@@ -53,12 +55,21 @@ public class CursoController {
   }
 
   @GetMapping("/horarios")
-  @Operation(summary = "Consulta de los horarios disponibles en las secciones de los cursos",
-          description = "Obtener la lista de cursos con detalles de secciones y sus respectivos horarios")
+  @Operation(summary = "Catálogo público de horarios y secciones vigentes",
+          description = "Consultar la oferta académica activa, incluyendo detalles de secciones, fechas de inicio y horarios programados")
   public ResponseEntity<ApiResponse<Page<OverviewCursoResponse>>> getHorarios(
           @ParameterObject @PageableDefault(size = 10, sort = "nombre", direction = Sort.Direction.ASC) Pageable pageable
   ) {
     Page<OverviewCursoResponse> response = cursoService.getHorarios(pageable);
+    return ResponseEntity.ok(new ApiResponse<>("Consulta exitosa", "200", response));
+  }
+
+  @GetMapping("/beca")
+  @PreAuthorize("hasRole('STUDENT')")
+  @Operation(summary = "Oferta académica personalizada para estudiante becado",
+          description = "Obtener exclusivamente los cursos y secciones disponibles para un estudiante con beca vigente")
+  public ResponseEntity<ApiResponse<List<OverviewCursoResponse>>> getCursosDisponibles() {
+    List<OverviewCursoResponse> response = cursoService.getOfertaDisponiblePorBeca();
     return ResponseEntity.ok(new ApiResponse<>("Consulta exitosa", "200", response));
   }
 }
