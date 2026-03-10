@@ -98,13 +98,7 @@ public class CursoService {
     List<Curso> listaCursos = cursoRepository.findCursosSecciones(idsPage.getContent(), hoy, pageable.getSort());
 
     List<OverviewCursoResponse> contenido = listaCursos.stream()
-            .map(curso -> {
-              List<OverviewSeccionResponse> seccionesDTO = curso.getSecciones().stream()
-                      .sorted(Comparator.comparing(Seccion::getFechaInicio))
-                      .map(SeccionMapper::mapOverviewSeccion)
-                      .toList();
-              return CursoMapper.mapHorario(curso, seccionesDTO);
-            })
+            .map(this::mapOverviewConSeccionesOrdenadas)
             .toList();
 
     return new PageImpl<>(contenido, pageable, idsPage.getTotalElements());
@@ -124,13 +118,7 @@ public class CursoService {
     List<Curso> cursosPostulacion = cursoRepository.findByIdPostulacion(postulacion.getId(), LocalDate.now());
 
     return cursosPostulacion.stream()
-            .map(curso -> {
-              List<OverviewSeccionResponse> seccionesDTO = curso.getSecciones().stream()
-                      .sorted(Comparator.comparing(Seccion::getFechaInicio))
-                      .map(SeccionMapper::mapOverviewSeccion)
-                      .toList();
-              return CursoMapper.mapHorario(curso, seccionesDTO);
-            })
+            .map(this::mapOverviewConSeccionesOrdenadas)
             .toList();
   }
 
@@ -142,6 +130,14 @@ public class CursoService {
         throw new BadRequestException("Campo de ordenamiento no permitido: " + order.getProperty());
       }
     });
+  }
+
+  private OverviewCursoResponse mapOverviewConSeccionesOrdenadas(Curso curso) {
+    List<OverviewSeccionResponse> seccionesDTO = curso.getSecciones().stream()
+            .sorted(Comparator.comparing(Seccion::getFechaInicio))
+            .map(SeccionMapper::mapOverviewSeccion)
+            .toList();
+    return CursoMapper.mapHorario(curso, seccionesDTO);
   }
 
   private static final Set<String> ORDENAMIENTOS_PERMITIDOS = Set.of("nombre", "modalidad");
