@@ -117,7 +117,7 @@ class MatriculaServiceTest {
             when(postulacionService.tieneBecaActiva(idEstudiante)).thenReturn(true);
             when(matriculaRepository.existsIntencionMatricula(idEstudiante)).thenReturn(false);
             when(postulacionRepository.findLastPostulacion(idEstudiante)).thenReturn(Optional.of(postulacion));
-            when(cursoRepository.findByIdPostulacion(idPostulacion)).thenReturn(List.of(curso));
+            when(cursoRepository.findByIdPostulacion(idPostulacion, LocalDate.now())).thenReturn(List.of(curso));
             when(seccionRepository.findById(idSeccion)).thenReturn(Optional.of(seccion));
             when(matriculaRepository.save(any(Matricula.class))).thenReturn(matriculaSaved);
 
@@ -212,7 +212,7 @@ class MatriculaServiceTest {
             when(postulacionService.tieneBecaActiva(idEstudiante)).thenReturn(true);
             when(matriculaRepository.existsIntencionMatricula(idEstudiante)).thenReturn(false);
             when(postulacionRepository.findLastPostulacion(idEstudiante)).thenReturn(Optional.of(postulacion));
-            when(cursoRepository.findByIdPostulacion(idPostulacion)).thenReturn(List.of(cursoPostulacion));
+            when(cursoRepository.findByIdPostulacion(idPostulacion, LocalDate.now())).thenReturn(List.of(cursoPostulacion));
             when(seccionRepository.findById(idSeccion)).thenReturn(Optional.of(seccion));
 
             // Act & Assert
@@ -254,7 +254,7 @@ class MatriculaServiceTest {
             when(postulacionService.tieneBecaActiva(idEstudiante)).thenReturn(true);
             when(matriculaRepository.existsIntencionMatricula(idEstudiante)).thenReturn(false);
             when(postulacionRepository.findLastPostulacion(idEstudiante)).thenReturn(Optional.of(postulacion));
-            when(cursoRepository.findByIdPostulacion(idPostulacion)).thenReturn(List.of(curso));
+            when(cursoRepository.findByIdPostulacion(idPostulacion, LocalDate.now())).thenReturn(List.of(curso));
             when(seccionRepository.findById(idSeccion)).thenReturn(Optional.of(seccion));
 
             // Act & Assert

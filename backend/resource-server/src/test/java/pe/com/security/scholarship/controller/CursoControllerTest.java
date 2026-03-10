@@ -19,9 +19,11 @@ import pe.com.security.scholarship.dto.request.RegisterCursoRequest;
 import pe.com.security.scholarship.dto.request.RegisterHorarioSeccionRequest;
 import pe.com.security.scholarship.dto.request.RegisterSeccionRequest;
 import pe.com.security.scholarship.dto.response.OverviewCursoResponse;
+import pe.com.security.scholarship.dto.response.OverviewSeccionResponse;
 import pe.com.security.scholarship.dto.response.RegisteredCursoResponse;
 import pe.com.security.scholarship.dto.response.RegisteredSeccionResponse;
 import pe.com.security.scholarship.exception.BadRequestException;
+import pe.com.security.scholarship.exception.NotFoundException;
 import pe.com.security.scholarship.service.CursoService;
 
 import java.time.LocalDate;
@@ -31,6 +33,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -146,7 +149,7 @@ class CursoControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
 
-        verify(cursoService, times(0)).register(any(RegisterCursoRequest.class));
+        verify(cursoService, never()).register(any(RegisterCursoRequest.class));
     }
 
     @Test
@@ -201,7 +204,7 @@ class CursoControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden());
 
-        verify(cursoService, times(0)).register(any(RegisterCursoRequest.class));
+        verify(cursoService, never()).register(any(RegisterCursoRequest.class));
     }
 
     @Test
@@ -340,5 +343,79 @@ class CursoControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Campo de ordenamiento no permitido: fechaCreacion"));
+    }
+
+    @Test
+    void getCursosDisponibles_ShouldReturnOk_WhenRoleIsStudent() throws Exception {
+        // Arrange
+        OverviewSeccionResponse seccion = OverviewSeccionResponse.builder().id(10).build();
+        OverviewCursoResponse curso = OverviewCursoResponse.builder()
+                .id(1)
+                .nombre("Curso para Beca")
+                .secciones(List.of(seccion))
+                .build();
+        when(cursoService.getOfertaDisponiblePorBeca()).thenReturn(List.of(curso));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/cursos/beca")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_STUDENT")))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Consulta exitosa"))
+                .andExpect(jsonPath("$.codigo").value("200"))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data[0].nombre").value("Curso para Beca"));
+
+        verify(cursoService, times(1)).getOfertaDisponiblePorBeca();
+    }
+
+    @Test
+    void getCursosDisponibles_ShouldReturnForbidden_WhenRoleIsIncorrect() throws Exception {
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/cursos/beca")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_INSTRUCTOR")))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden());
+
+        verify(cursoService, never()).getOfertaDisponiblePorBeca();
+    }
+
+    @Test
+    void getCursosDisponibles_ShouldReturnUnauthorized_WhenAnonymous() throws Exception {
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/cursos/beca")
+                        .with(anonymous())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnauthorized());
+
+        verify(cursoService, never()).getOfertaDisponiblePorBeca();
+    }
+
+    @Test
+    void getCursosDisponibles_ShouldReturnBadRequest_WhenServiceThrowsBadRequest() throws Exception {
+        // Arrange
+        when(cursoService.getOfertaDisponiblePorBeca())
+                .thenThrow(new BadRequestException("No tienes una beca vigente"));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/cursos/beca")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_STUDENT")))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("No tienes una beca vigente"));
+    }
+
+    @Test
+    void getCursosDisponibles_ShouldReturnNotFound_WhenServiceThrowsNotFound() throws Exception {
+        // Arrange
+        when(cursoService.getOfertaDisponiblePorBeca())
+                .thenThrow(new NotFoundException("No se encontró postulación"));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/cursos/beca")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_STUDENT")))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("No se encontró postulación"));
     }
 }

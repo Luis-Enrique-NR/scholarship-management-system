@@ -72,7 +72,7 @@ public class MatriculaService {
     Postulacion postulacion = postulacionRepository.findLastPostulacion(estudiante.getId())
             .orElseThrow(() -> new NotFoundException("No se encontró postulación para el presente año"));
 
-    List<Curso> cursosPostulacion = cursoRepository.findByIdPostulacion(postulacion.getId());
+    List<Curso> cursosPostulacion = cursoRepository.findByIdPostulacion(postulacion.getId(), LocalDate.now());
 
     Seccion seccionMatricula = seccionRepository.findById(request.getIdSeccion())
             .orElseThrow(() -> new NotFoundException("No se encontró sección con el ID ingresado"));

@@ -15,8 +15,15 @@ import java.util.List;
 @Repository
 public interface CursoRepository extends JpaRepository<Curso, Integer> {
 
-  @Query("SELECT DISTINCT c FROM Curso c JOIN FETCH c.secciones s JOIN c.postulaciones p WHERE p.id = :idPostulacion")
-  List<Curso> findByIdPostulacion(@Param("idPostulacion") Integer idPostulacion);
+  @Query("""
+           SELECT DISTINCT c
+           FROM Curso c
+           JOIN FETCH c.secciones s
+           JOIN c.postulaciones p
+           WHERE p.id = :idPostulacion
+           AND s.fechaInicio > :fechaReferencia
+  """)
+  List<Curso> findByIdPostulacion(@Param("idPostulacion") Integer idPostulacion, @Param("fechaReferencia") LocalDate fecha);
 
   boolean existsByCodigo(String codigo);
 
