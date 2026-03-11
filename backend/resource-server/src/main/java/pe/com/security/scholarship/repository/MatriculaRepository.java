@@ -113,4 +113,18 @@ public interface MatriculaRepository extends JpaRepository<Matricula, Integer> {
             AND s.fecha_inicio = :currentDate
   """, nativeQuery = true)
   int rechazarPostulantes(@Param("currentDate") LocalDate hoy);
+
+  @Modifying
+  @Query(value = """
+          UPDATE matriculas m
+          SET nota = :nota
+          FROM postulaciones p
+          INNER JOIN estudiantes e ON e.id = p.id_estudiante
+          WHERE m.id_postulacion = p.id
+            AND m.id_seccion = :idSeccion
+            AND e.codigo_estudiante = :codigo
+            AND m.estado = 'ACEPTADO'
+  """, nativeQuery = true)
+  int actualizarNota(@Param("codigo") String codigoEstudiante, @Param("idSeccion") Integer idSeccion,
+                      @Param("nota") Double nota);
 }

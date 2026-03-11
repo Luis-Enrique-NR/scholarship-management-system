@@ -3,11 +3,14 @@ package pe.com.security.scholarship.service;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Limit;
+import org.springframework.mock.web.MockMultipartFile;
 import pe.com.security.scholarship.domain.entity.Curso;
 import pe.com.security.scholarship.domain.entity.Empleado;
 import pe.com.security.scholarship.domain.entity.Estudiante;
@@ -15,9 +18,11 @@ import pe.com.security.scholarship.domain.entity.Matricula;
 import pe.com.security.scholarship.domain.entity.Postulacion;
 import pe.com.security.scholarship.domain.entity.Seccion;
 import pe.com.security.scholarship.domain.enums.EstadoMatricula;
+import pe.com.security.scholarship.dto.ProcesamientoResult;
 import pe.com.security.scholarship.dto.projection.BecadoIntencionProjection;
 import pe.com.security.scholarship.dto.projection.SeccionIntencionProjection;
 import pe.com.security.scholarship.dto.request.AprobarMatriculaRequest;
+import pe.com.security.scholarship.dto.request.NotaCsvRequest;
 import pe.com.security.scholarship.dto.request.SubmitMatriculaRequest;
 import pe.com.security.scholarship.dto.response.CursoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.IntencionMatriculaResponse;
@@ -31,6 +36,7 @@ import pe.com.security.scholarship.repository.EstudianteRepository;
 import pe.com.security.scholarship.repository.MatriculaRepository;
 import pe.com.security.scholarship.repository.PostulacionRepository;
 import pe.com.security.scholarship.repository.SeccionRepository;
+import pe.com.security.scholarship.util.CargaMasivaHelper;
 import pe.com.security.scholarship.util.SecurityUtils;
 
 import java.time.Instant;
@@ -40,11 +46,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -67,6 +75,11 @@ class MatriculaServiceTest {
     private PostulacionService postulacionService;
     @Mock
     private EmpleadoRepository empleadoRepository;
+    @Mock
+    private CargaMasivaHelper cargaMasivaHelper;
+
+    @Captor
+    private ArgumentCaptor<Consumer<NotaCsvRequest>> consumerCaptor;
 
     @InjectMocks
     private MatriculaService matriculaService;
@@ -607,6 +620,141 @@ class MatriculaServiceTest {
                     .isInstanceOf(NotFoundException.class)
                     .hasMessage("No se encontró la matrícula con el ID enviado");
         }
+    }
+
+    @Test
+    void procesarCargaNotas_ShouldThrowNotFound_WhenSectionDoesNotExist() {
+        Integer idSeccion = 1;
+        MockMultipartFile file = new MockMultipartFile("file", "notas.csv", "text/csv", "content".getBytes());
+
+        when(seccionRepository.findById(idSeccion)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> matriculaService.procesarCargaNotas(file, idSeccion))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessage("Sección no encontrada");
+    }
+
+    @Test
+    void procesarCargaNotas_ShouldThrowBadRequest_WhenSectionNotStarted() {
+        Integer idSeccion = 1;
+        MockMultipartFile file = new MockMultipartFile("file", "notas.csv", "text/csv", "content".getBytes());
+
+        Seccion seccion = new Seccion();
+        seccion.setId(idSeccion);
+        seccion.setFechaInicio(LocalDate.now().plusDays(1)); // Futuro
+
+        when(seccionRepository.findById(idSeccion)).thenReturn(Optional.of(seccion));
+
+        assertThatThrownBy(() -> matriculaService.procesarCargaNotas(file, idSeccion))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("No se pueden subir notas antes del inicio de la sección");
+    }
+
+    @Test
+    void procesarCargaNotas_ShouldProcessRow_WhenValid() {
+        Integer idSeccion = 1;
+        MockMultipartFile file = new MockMultipartFile("file", "notas.csv", "text/csv", "content".getBytes());
+
+        Seccion seccion = new Seccion();
+        seccion.setId(idSeccion);
+        seccion.setFechaInicio(LocalDate.now().minusDays(1)); // Pasado (iniciada)
+
+        when(seccionRepository.findById(idSeccion)).thenReturn(Optional.of(seccion));
+
+        ProcesamientoResult expectedResult = ProcesamientoResult.builder().total(1).exitos(1).fallidos(0).errores(Collections.emptyList()).build();
+        when(cargaMasivaHelper.procesar(eq(file), eq(NotaCsvRequest.class), any())).thenReturn(expectedResult);
+
+        // Act
+        ProcesamientoResult result = matriculaService.procesarCargaNotas(file, idSeccion);
+
+        // Assert
+        assertThat(result).isEqualTo(expectedResult);
+
+        // Now capture the consumer to test the logic inside
+        verify(cargaMasivaHelper).procesar(eq(file), eq(NotaCsvRequest.class), consumerCaptor.capture());
+        Consumer<NotaCsvRequest> consumer = consumerCaptor.getValue();
+
+        // Simulate a valid row
+        NotaCsvRequest validRow = mock(NotaCsvRequest.class);
+        when(validRow.getNota()).thenReturn(15.0);
+        when(validRow.getCodigo()).thenReturn("STU001");
+
+        when(matriculaRepository.actualizarNota("STU001", idSeccion, 15.0)).thenReturn(1);
+
+        // Execute logic
+        consumer.accept(validRow);
+
+        // Verify repository call
+        verify(matriculaRepository).actualizarNota("STU001", idSeccion, 15.0);
+    }
+
+    @Test
+    void procesarCargaNotas_ShouldThrowBadRequest_WhenGradeInvalidHigh() {
+        Integer idSeccion = 1;
+        MockMultipartFile file = new MockMultipartFile("file", "notas.csv", "text/csv", "content".getBytes());
+        Seccion seccion = new Seccion();
+        seccion.setId(idSeccion);
+        seccion.setFechaInicio(LocalDate.now().minusDays(1));
+        when(seccionRepository.findById(idSeccion)).thenReturn(Optional.of(seccion));
+
+        matriculaService.procesarCargaNotas(file, idSeccion);
+
+        verify(cargaMasivaHelper).procesar(eq(file), eq(NotaCsvRequest.class), consumerCaptor.capture());
+        Consumer<NotaCsvRequest> consumer = consumerCaptor.getValue();
+
+        NotaCsvRequest invalidRow = mock(NotaCsvRequest.class);
+        when(invalidRow.getNota()).thenReturn(25.0);
+
+        assertThatThrownBy(() -> consumer.accept(invalidRow))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("La nota debe estar entre 0 y 20");
+    }
+
+    @Test
+    void procesarCargaNotas_ShouldThrowBadRequest_WhenGradeInvalidLow() {
+        Integer idSeccion = 1;
+        MockMultipartFile file = new MockMultipartFile("file", "notas.csv", "text/csv", "content".getBytes());
+        Seccion seccion = new Seccion();
+        seccion.setId(idSeccion);
+        seccion.setFechaInicio(LocalDate.now().minusDays(1));
+        when(seccionRepository.findById(idSeccion)).thenReturn(Optional.of(seccion));
+
+        matriculaService.procesarCargaNotas(file, idSeccion);
+
+        verify(cargaMasivaHelper).procesar(eq(file), eq(NotaCsvRequest.class), consumerCaptor.capture());
+        Consumer<NotaCsvRequest> consumer = consumerCaptor.getValue();
+
+        NotaCsvRequest invalidRow = mock(NotaCsvRequest.class);
+        when(invalidRow.getNota()).thenReturn(-5.0);
+
+        assertThatThrownBy(() -> consumer.accept(invalidRow))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("La nota debe estar entre 0 y 20");
+    }
+
+    @Test
+    void procesarCargaNotas_ShouldThrowBadRequest_WhenStudentNotEnrolled() {
+        Integer idSeccion = 1;
+        MockMultipartFile file = new MockMultipartFile("file", "notas.csv", "text/csv", "content".getBytes());
+        Seccion seccion = new Seccion();
+        seccion.setId(idSeccion);
+        seccion.setFechaInicio(LocalDate.now().minusDays(1));
+        when(seccionRepository.findById(idSeccion)).thenReturn(Optional.of(seccion));
+
+        matriculaService.procesarCargaNotas(file, idSeccion);
+
+        verify(cargaMasivaHelper).procesar(eq(file), eq(NotaCsvRequest.class), consumerCaptor.capture());
+        Consumer<NotaCsvRequest> consumer = consumerCaptor.getValue();
+
+        NotaCsvRequest row = mock(NotaCsvRequest.class);
+        when(row.getNota()).thenReturn(15.0);
+        when(row.getCodigo()).thenReturn("STU001");
+
+        when(matriculaRepository.actualizarNota("STU001", idSeccion, 15.0)).thenReturn(0);
+
+        assertThatThrownBy(() -> consumer.accept(row))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("El estudiante STU001 no pertenece a esta sección");
     }
 
     static class RealBecadoProjection implements BecadoIntencionProjection {

@@ -10,6 +10,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.TransactionSystemException;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import pe.com.security.scholarship.domain.entity.Curso;
 import pe.com.security.scholarship.domain.entity.Empleado;
 import pe.com.security.scholarship.domain.entity.Estudiante;
@@ -17,8 +18,10 @@ import pe.com.security.scholarship.domain.entity.Matricula;
 import pe.com.security.scholarship.domain.entity.Postulacion;
 import pe.com.security.scholarship.domain.entity.Seccion;
 import pe.com.security.scholarship.domain.enums.EstadoMatricula;
+import pe.com.security.scholarship.dto.ProcesamientoResult;
 import pe.com.security.scholarship.dto.projection.SeccionIntencionProjection;
 import pe.com.security.scholarship.dto.request.AprobarMatriculaRequest;
+import pe.com.security.scholarship.dto.request.NotaCsvRequest;
 import pe.com.security.scholarship.dto.request.SubmitMatriculaRequest;
 import pe.com.security.scholarship.dto.response.BecadoIntencionMatriculaResponse;
 import pe.com.security.scholarship.dto.response.CursoIntencionMatriculaResponse;
@@ -35,6 +38,7 @@ import pe.com.security.scholarship.repository.EstudianteRepository;
 import pe.com.security.scholarship.repository.MatriculaRepository;
 import pe.com.security.scholarship.repository.PostulacionRepository;
 import pe.com.security.scholarship.repository.SeccionRepository;
+import pe.com.security.scholarship.util.CargaMasivaHelper;
 import pe.com.security.scholarship.util.SecurityUtils;
 
 import java.time.Instant;
@@ -57,6 +61,7 @@ public class MatriculaService {
   private final MatriculaRepository matriculaRepository;
   private final EmpleadoRepository empleadoRepository;
   private final PostulacionService postulacionService;
+  private final CargaMasivaHelper cargaMasivaHelper;
 
   @Transactional
   public RegisteredMatriculaResponse submitEnrollmentIntention(SubmitMatriculaRequest request) {
@@ -184,6 +189,28 @@ public class MatriculaService {
     matricula.setFechaMatricula(request.getAprobado() ? Instant.now() : null);
 
     matricula.setEstado(request.getAprobado() ? EstadoMatricula.ACEPTADO : EstadoMatricula.RECHAZADO);
+  }
+
+  @Transactional
+  public ProcesamientoResult procesarCargaNotas(MultipartFile file, Integer idSeccion) {
+    Seccion seccion = seccionRepository.findById(idSeccion)
+            .orElseThrow(() -> new NotFoundException("Sección no encontrada"));
+
+    if (LocalDate.now().isBefore(seccion.getFechaInicio())) {
+      throw new BadRequestException("No se pueden subir notas antes del inicio de la sección");
+    }
+
+    return cargaMasivaHelper.procesar(file, NotaCsvRequest.class, fila -> {
+      if (fila.getNota() < 0 || fila.getNota() > 20) {
+        throw new BadRequestException("La nota debe estar entre 0 y 20");
+      }
+
+      int filasAfectadas = matriculaRepository.actualizarNota(fila.getCodigo(), idSeccion, fila.getNota());
+
+      if (filasAfectadas == 0) {
+        throw new BadRequestException("El estudiante " + fila.getCodigo() + " no pertenece a esta sección");
+      }
+    });
   }
 
   @Scheduled(cron = "0 5 0 * * *")
