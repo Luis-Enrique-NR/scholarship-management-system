@@ -1,11 +1,14 @@
 package pe.com.security.scholarship.service;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import pe.com.security.scholarship.domain.entity.Curso;
+import pe.com.security.scholarship.domain.entity.Empleado;
 import pe.com.security.scholarship.domain.entity.Seccion;
 import pe.com.security.scholarship.domain.enums.DiaSemana;
 import pe.com.security.scholarship.dto.request.RegisterHorarioSeccionRequest;
@@ -16,20 +19,24 @@ import pe.com.security.scholarship.dto.response.UpdatedVacantesSeccionResponse;
 import pe.com.security.scholarship.exception.BadRequestException;
 import pe.com.security.scholarship.exception.NotFoundException;
 import pe.com.security.scholarship.repository.CursoRepository;
+import pe.com.security.scholarship.repository.EmpleadoRepository;
 import pe.com.security.scholarship.repository.MatriculaRepository;
 import pe.com.security.scholarship.repository.SeccionRepository;
+import pe.com.security.scholarship.util.SecurityUtils;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -47,8 +54,16 @@ class SeccionServiceTest {
     @Mock
     private MatriculaRepository matriculaRepository;
 
+    @Mock
+    private EmpleadoRepository empleadoRepository;
+
     @InjectMocks
     private SeccionService seccionService;
+
+    @AfterEach
+    void tearDown() {
+        // No static mocks to close here as we use try-with-resources per test where needed
+    }
 
     // --- Tests para register ---
 
@@ -322,40 +337,53 @@ class SeccionServiceTest {
         verify(seccionRepository, never()).save(any());
     }
 
-    // --- Tests para updateVacantes (existentes) ---
+    // --- Tests para updateVacantes ---
 
     @Test
     void updateVacantes_ShouldSucceed_WhenFirstSettingOfVacancies() {
         // Arrange
+        UUID idUsuario = UUID.randomUUID();
+        UUID idEmpleado = UUID.randomUUID();
         Integer idSeccion = 1;
         Integer requestedVacancies = 20;
+
         UpdateVacantesSeccionRequest request = new UpdateVacantesSeccionRequest();
         request.setIdSeccion(idSeccion);
         request.setCantidadVacantes(requestedVacancies);
+
+        Empleado empleado = new Empleado();
+        empleado.setId(idEmpleado);
 
         Seccion seccion = new Seccion();
         seccion.setId(idSeccion);
         seccion.setVacantesDisponibles(null); // Primer seteo
 
-        when(seccionRepository.findById(idSeccion)).thenReturn(Optional.of(seccion));
-        when(matriculaRepository.matricularPostulantes(eq(idSeccion), eq(requestedVacancies))).thenReturn(5);
+        try (MockedStatic<SecurityUtils> securityUtilsMock = mockStatic(SecurityUtils.class)) {
+            securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
 
-        // Act
-        UpdatedVacantesSeccionResponse response = seccionService.updateVacantes(request);
+            when(empleadoRepository.findByIdUsuario(idUsuario)).thenReturn(Optional.of(empleado));
+            when(seccionRepository.findById(idSeccion)).thenReturn(Optional.of(seccion));
+            when(matriculaRepository.matricularPostulantes(eq(idSeccion), eq(requestedVacancies), eq(idEmpleado))).thenReturn(5);
 
-        // Assert
-        assertThat(response).isNotNull();
-        assertThat(response.getCantidadNuevosMatriculados()).isEqualTo(5);
-        assertThat(response.getTotalMatriculados()).isEqualTo(requestedVacancies);
-        
-        verify(seccionRepository, times(1)).save(seccion);
-        // Verifica que se llame con el total solicitado porque vacantesDisponibles era null
-        verify(matriculaRepository, times(1)).matricularPostulantes(idSeccion, requestedVacancies);
+            // Act
+            UpdatedVacantesSeccionResponse response = seccionService.updateVacantes(request);
+
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(response.getCantidadNuevosMatriculados()).isEqualTo(5);
+            assertThat(response.getTotalMatriculados()).isEqualTo(requestedVacancies);
+
+            verify(empleadoRepository).findByIdUsuario(idUsuario);
+            verify(seccionRepository, times(1)).save(seccion);
+            verify(matriculaRepository, times(1)).matricularPostulantes(idSeccion, requestedVacancies, idEmpleado);
+        }
     }
 
     @Test
     void updateVacantes_ShouldSucceed_WhenIncreasingVacancies() {
         // Arrange
+        UUID idUsuario = UUID.randomUUID();
+        UUID idEmpleado = UUID.randomUUID();
         Integer idSeccion = 1;
         Integer currentVacancies = 10;
         Integer requestedVacancies = 15;
@@ -365,94 +393,146 @@ class SeccionServiceTest {
         request.setIdSeccion(idSeccion);
         request.setCantidadVacantes(requestedVacancies);
 
+        Empleado empleado = new Empleado();
+        empleado.setId(idEmpleado);
+
         Seccion seccion = new Seccion();
         seccion.setId(idSeccion);
         seccion.setVacantesDisponibles(currentVacancies);
 
-        when(seccionRepository.findById(idSeccion)).thenReturn(Optional.of(seccion));
-        when(matriculaRepository.matricularPostulantes(eq(idSeccion), eq(expectedIncrement))).thenReturn(3);
+        try (MockedStatic<SecurityUtils> securityUtilsMock = mockStatic(SecurityUtils.class)) {
+            securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
 
-        // Act
-        UpdatedVacantesSeccionResponse response = seccionService.updateVacantes(request);
+            when(empleadoRepository.findByIdUsuario(idUsuario)).thenReturn(Optional.of(empleado));
+            when(seccionRepository.findById(idSeccion)).thenReturn(Optional.of(seccion));
+            when(matriculaRepository.matricularPostulantes(eq(idSeccion), eq(expectedIncrement), eq(idEmpleado))).thenReturn(3);
 
-        // Assert
-        assertThat(response).isNotNull();
-        assertThat(response.getCantidadNuevosMatriculados()).isEqualTo(3);
-        assertThat(response.getTotalMatriculados()).isEqualTo(requestedVacancies);
+            // Act
+            UpdatedVacantesSeccionResponse response = seccionService.updateVacantes(request);
 
-        verify(seccionRepository, times(1)).save(seccion);
-        // Verifica que se llame con la diferencia (15 - 10 = 5)
-        verify(matriculaRepository, times(1)).matricularPostulantes(idSeccion, expectedIncrement);
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(response.getCantidadNuevosMatriculados()).isEqualTo(3);
+            assertThat(response.getTotalMatriculados()).isEqualTo(requestedVacancies);
+
+            verify(empleadoRepository).findByIdUsuario(idUsuario);
+            verify(seccionRepository, times(1)).save(seccion);
+            verify(matriculaRepository, times(1)).matricularPostulantes(idSeccion, expectedIncrement, idEmpleado);
+        }
+    }
+
+    @Test
+    void updateVacantes_ShouldThrowNotFound_WhenEmployeeNotFound() {
+        // Arrange
+        UUID idUsuario = UUID.randomUUID();
+        UpdateVacantesSeccionRequest request = new UpdateVacantesSeccionRequest();
+
+        try (MockedStatic<SecurityUtils> securityUtilsMock = mockStatic(SecurityUtils.class)) {
+            securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
+            when(empleadoRepository.findByIdUsuario(idUsuario)).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(() -> seccionService.updateVacantes(request))
+                    .isInstanceOf(NotFoundException.class)
+                    .hasMessage("Empleado no encontrado");
+
+            verify(seccionRepository, never()).save(any());
+            verify(matriculaRepository, never()).matricularPostulantes(any(), any(), any());
+        }
     }
 
     @Test
     void updateVacantes_ShouldThrowBadRequest_WhenNewVacanciesAreLessOrEqual() {
         // Arrange
+        UUID idUsuario = UUID.randomUUID();
         Integer idSeccion = 1;
         Integer currentVacancies = 20;
-        Integer requestedVacancies = 15; // Menor que actual
+        Integer requestedVacancies = 15;
 
         UpdateVacantesSeccionRequest request = new UpdateVacantesSeccionRequest();
         request.setIdSeccion(idSeccion);
         request.setCantidadVacantes(requestedVacancies);
 
+        Empleado empleado = new Empleado();
+
         Seccion seccion = new Seccion();
         seccion.setId(idSeccion);
         seccion.setVacantesDisponibles(currentVacancies);
 
-        when(seccionRepository.findById(idSeccion)).thenReturn(Optional.of(seccion));
+        try (MockedStatic<SecurityUtils> securityUtilsMock = mockStatic(SecurityUtils.class)) {
+            securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
 
-        // Act & Assert
-        assertThatThrownBy(() -> seccionService.updateVacantes(request))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessage("La nueva cantidad de vacantes debe superar a las disponibles actualmente");
+            when(empleadoRepository.findByIdUsuario(idUsuario)).thenReturn(Optional.of(empleado));
+            when(seccionRepository.findById(idSeccion)).thenReturn(Optional.of(seccion));
 
-        verify(seccionRepository, never()).save(any());
-        verify(matriculaRepository, never()).matricularPostulantes(any(), any());
+            // Act & Assert
+            assertThatThrownBy(() -> seccionService.updateVacantes(request))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasMessage("La nueva cantidad de vacantes debe superar a las disponibles actualmente");
+
+            verify(seccionRepository, never()).save(any());
+            verify(matriculaRepository, never()).matricularPostulantes(any(), any(), any());
+        }
     }
 
     @Test
     void updateVacantes_ShouldThrowBadRequest_WhenNewVacanciesAreEqual() {
         // Arrange
+        UUID idUsuario = UUID.randomUUID();
         Integer idSeccion = 1;
         Integer currentVacancies = 20;
-        Integer requestedVacancies = 20; // Igual que actual
+        Integer requestedVacancies = 20;
 
         UpdateVacantesSeccionRequest request = new UpdateVacantesSeccionRequest();
         request.setIdSeccion(idSeccion);
         request.setCantidadVacantes(requestedVacancies);
 
+        Empleado empleado = new Empleado();
+
         Seccion seccion = new Seccion();
         seccion.setId(idSeccion);
         seccion.setVacantesDisponibles(currentVacancies);
 
-        when(seccionRepository.findById(idSeccion)).thenReturn(Optional.of(seccion));
+        try (MockedStatic<SecurityUtils> securityUtilsMock = mockStatic(SecurityUtils.class)) {
+            securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
 
-        // Act & Assert
-        assertThatThrownBy(() -> seccionService.updateVacantes(request))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessage("La nueva cantidad de vacantes debe superar a las disponibles actualmente");
+            when(empleadoRepository.findByIdUsuario(idUsuario)).thenReturn(Optional.of(empleado));
+            when(seccionRepository.findById(idSeccion)).thenReturn(Optional.of(seccion));
 
-        verify(seccionRepository, never()).save(any());
-        verify(matriculaRepository, never()).matricularPostulantes(any(), any());
+            // Act & Assert
+            assertThatThrownBy(() -> seccionService.updateVacantes(request))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasMessage("La nueva cantidad de vacantes debe superar a las disponibles actualmente");
+
+            verify(seccionRepository, never()).save(any());
+            verify(matriculaRepository, never()).matricularPostulantes(any(), any(), any());
+        }
     }
 
     @Test
     void updateVacantes_ShouldThrowNotFound_WhenSectionDoesNotExist() {
         // Arrange
+        UUID idUsuario = UUID.randomUUID();
         Integer idSeccion = 999;
         UpdateVacantesSeccionRequest request = new UpdateVacantesSeccionRequest();
         request.setIdSeccion(idSeccion);
         request.setCantidadVacantes(20);
 
-        when(seccionRepository.findById(idSeccion)).thenReturn(Optional.empty());
+        Empleado empleado = new Empleado();
 
-        // Act & Assert
-        assertThatThrownBy(() -> seccionService.updateVacantes(request))
-                .isInstanceOf(NotFoundException.class)
-                .hasMessage("No se encontró la sección con el ID ingresado");
+        try (MockedStatic<SecurityUtils> securityUtilsMock = mockStatic(SecurityUtils.class)) {
+            securityUtilsMock.when(SecurityUtils::getCurrentUserId).thenReturn(idUsuario);
 
-        verify(seccionRepository, never()).save(any());
-        verify(matriculaRepository, never()).matricularPostulantes(any(), any());
+            when(empleadoRepository.findByIdUsuario(idUsuario)).thenReturn(Optional.of(empleado));
+            when(seccionRepository.findById(idSeccion)).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(() -> seccionService.updateVacantes(request))
+                    .isInstanceOf(NotFoundException.class)
+                    .hasMessage("No se encontró la sección con el ID ingresado");
+
+            verify(seccionRepository, never()).save(any());
+            verify(matriculaRepository, never()).matricularPostulantes(any(), any(), any());
+        }
     }
 }

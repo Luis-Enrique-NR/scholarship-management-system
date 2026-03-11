@@ -90,7 +90,7 @@ public interface MatriculaRepository extends JpaRepository<Matricula, Integer> {
   @Modifying
   @Query(value = """
           UPDATE matriculas m
-          SET estado = 'ACEPTADO'
+          SET estado = 'ACEPTADO', id_empleado = :idEmpleado
           FROM (
               SELECT id
               FROM matriculas
@@ -101,7 +101,8 @@ public interface MatriculaRepository extends JpaRepository<Matricula, Integer> {
           ) AS sub
           WHERE m.id = sub.id
   """, nativeQuery = true)
-  int matricularPostulantes(@Param("idSeccion") Integer idSeccion, @Param("nuevasVacantes") Integer nuevasVacantes);
+  int matricularPostulantes(@Param("idSeccion") Integer idSeccion, @Param("nuevasVacantes") Integer nuevasVacantes,
+                            @Param("idEmpleado") UUID idEmpleado);
 
   @Modifying
   @Query(value = """
@@ -113,4 +114,18 @@ public interface MatriculaRepository extends JpaRepository<Matricula, Integer> {
             AND s.fecha_inicio = :currentDate
   """, nativeQuery = true)
   int rechazarPostulantes(@Param("currentDate") LocalDate hoy);
+
+  @Modifying
+  @Query(value = """
+          UPDATE matriculas m
+          SET nota = :nota
+          FROM postulaciones p
+          INNER JOIN estudiantes e ON e.id = p.id_estudiante
+          WHERE m.id_postulacion = p.id
+            AND m.id_seccion = :idSeccion
+            AND e.codigo_estudiante = :codigo
+            AND m.estado = 'ACEPTADO'
+  """, nativeQuery = true)
+  int actualizarNota(@Param("codigo") String codigoEstudiante, @Param("idSeccion") Integer idSeccion,
+                      @Param("nota") Double nota);
 }

@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,7 +13,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import pe.com.security.scholarship.dto.ProcesamientoResult;
 import pe.com.security.scholarship.dto.request.AprobarMatriculaRequest;
 import pe.com.security.scholarship.dto.request.SubmitMatriculaRequest;
 import pe.com.security.scholarship.dto.response.CursoIntencionMatriculaResponse;
@@ -21,6 +25,7 @@ import pe.com.security.scholarship.dto.response.RegisteredMatriculaResponse;
 import pe.com.security.scholarship.dto.response.SeccionBecadosResponse;
 import pe.com.security.scholarship.service.MatriculaService;
 import pe.com.security.scholarship.util.ApiResponse;
+import pe.com.security.scholarship.util.FileUtils;
 
 import java.util.List;
 
@@ -80,5 +85,19 @@ public class MatriculaController {
   ) {
     matriculaService.actualizarEstadoMatricula(request);
     return ResponseEntity.ok(new ApiResponse<>("Actualización exitosa", "200", null));
+  }
+
+  @PatchMapping(value = "/notas/{idSeccion}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @PreAuthorize("hasRole('TRAINING_CENTER_SECRETARY')")
+  @Operation(summary = "Carga masiva de notas en una sección",
+          description = "Permite actualizar las notas de los estudiantes mediante un archivo CSV")
+  public ResponseEntity<ApiResponse<ProcesamientoResult>> cargarNotas(
+          @RequestParam("file") MultipartFile file,
+          @PathVariable Integer idSeccion
+  ) {
+    FileUtils.validarCsv(file);
+
+    ProcesamientoResult response = matriculaService.procesarCargaNotas(file, idSeccion);
+    return ResponseEntity.ok(new ApiResponse<>("Procesamiento finalizado", "200", response));
   }
 }

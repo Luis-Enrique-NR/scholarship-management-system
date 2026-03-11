@@ -1,15 +1,19 @@
 package pe.com.security.scholarship.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import pe.com.security.scholarship.config.ResourceServerTest;
 import pe.com.security.scholarship.domain.enums.EstadoMatricula;
+import pe.com.security.scholarship.dto.ProcesamientoResult;
 import pe.com.security.scholarship.dto.request.AprobarMatriculaRequest;
 import pe.com.security.scholarship.dto.request.SubmitMatriculaRequest;
 import pe.com.security.scholarship.dto.response.BecadoIntencionMatriculaResponse;
@@ -21,18 +25,24 @@ import pe.com.security.scholarship.dto.response.SeccionIntencionMatriculaRespons
 import pe.com.security.scholarship.exception.BadRequestException;
 import pe.com.security.scholarship.exception.NotFoundException;
 import pe.com.security.scholarship.service.MatriculaService;
+import pe.com.security.scholarship.util.FileUtils;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -50,6 +60,11 @@ class MatriculaControllerTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @AfterEach
+    void tearDown() {
+        // No static mocks to close here as we use try-with-resources per test where needed
+    }
 
     @Test
     void submitEnrollmentIntention_ShouldReturnOk_WhenRequestIsValid() throws Exception {
@@ -351,5 +366,97 @@ class MatriculaControllerTest {
                 .andExpect(status().isForbidden());
 
         verify(matriculaService, times(0)).actualizarEstadoMatricula(any(AprobarMatriculaRequest.class));
+    }
+
+    @Test
+    void cargarNotas_ShouldReturnOk_WhenRequestIsValid() throws Exception {
+        Integer idSeccion = 1;
+        MockMultipartFile file = new MockMultipartFile("file", "notas.csv", "text/csv", "codigo,nota\nSTU001,15".getBytes());
+
+        ProcesamientoResult result = ProcesamientoResult.builder()
+                .total(1)
+                .exitos(1)
+                .fallidos(0)
+                .errores(Collections.emptyList())
+                .build();
+
+        // Usamos try-with-resources para mockStatic dentro del test
+        try (MockedStatic<FileUtils> fileUtilsMock = mockStatic(FileUtils.class)) {
+            // Simulamos que la validación pasa (no hace nada)
+            fileUtilsMock.when(() -> FileUtils.validarCsv(any())).thenAnswer(invocation -> null);
+
+            when(matriculaService.procesarCargaNotas(any(), eq(idSeccion))).thenReturn(result);
+
+            mockMvc.perform(multipart("/api/v1/matriculas/notas/{idSeccion}", idSeccion)
+                            .file(file)
+                            .with(request -> {
+                                request.setMethod("PATCH");
+                                return request;
+                            })
+                            .with(csrf())
+                            .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_TRAINING_CENTER_SECRETARY")))
+                            .contentType(MediaType.MULTIPART_FORM_DATA))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.message").value("Procesamiento finalizado"))
+                    .andExpect(jsonPath("$.data.exitos").value(1));
+
+            verify(matriculaService).procesarCargaNotas(any(), eq(idSeccion));
+            fileUtilsMock.verify(() -> FileUtils.validarCsv(any()), times(1));
+        }
+    }
+
+    @Test
+    void cargarNotas_ShouldReturnForbidden_WhenUserIsNotAuthorized() throws Exception {
+        Integer idSeccion = 1;
+        MockMultipartFile file = new MockMultipartFile("file", "notas.csv", "text/csv", "content".getBytes());
+
+        mockMvc.perform(multipart("/api/v1/matriculas/notas/{idSeccion}", idSeccion)
+                        .file(file)
+                        .with(request -> {
+                            request.setMethod("PATCH");
+                            return request;
+                        })
+                        .with(csrf())
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_STUDENT"))) // Wrong Role
+                        .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void cargarNotas_ShouldReturnUnauthorized_WhenUserIsNotAuthenticated() throws Exception {
+        Integer idSeccion = 1;
+        MockMultipartFile file = new MockMultipartFile("file", "notas.csv", "text/csv", "content".getBytes());
+
+        mockMvc.perform(multipart("/api/v1/matriculas/notas/{idSeccion}", idSeccion)
+                        .file(file)
+                        .with(request -> {
+                            request.setMethod("PATCH");
+                            return request;
+                        })
+                        .with(csrf())
+                        .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void cargarNotas_ShouldReturnBadRequest_WhenFileIsInvalid() throws Exception {
+        Integer idSeccion = 1;
+        MockMultipartFile file = new MockMultipartFile("file", "notas.txt", "text/plain", "content".getBytes());
+
+        try (MockedStatic<FileUtils> fileUtilsMock = mockStatic(FileUtils.class)) {
+            fileUtilsMock.when(() -> FileUtils.validarCsv(any())).thenThrow(new BadRequestException("El archivo no es un CSV válido"));
+
+            mockMvc.perform(multipart("/api/v1/matriculas/notas/{idSeccion}", idSeccion)
+                            .file(file)
+                            .with(request -> {
+                                request.setMethod("PATCH");
+                                return request;
+                            })
+                            .with(csrf())
+                            .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_TRAINING_CENTER_SECRETARY")))
+                            .contentType(MediaType.MULTIPART_FORM_DATA))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("El archivo no es un CSV válido"));
+        }
     }
 }
