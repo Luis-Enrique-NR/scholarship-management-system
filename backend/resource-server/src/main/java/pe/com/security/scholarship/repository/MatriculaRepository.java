@@ -90,7 +90,7 @@ public interface MatriculaRepository extends JpaRepository<Matricula, Integer> {
   @Modifying
   @Query(value = """
           UPDATE matriculas m
-          SET estado = 'ACEPTADO'
+          SET estado = 'ACEPTADO', id_empleado = :idEmpleado
           FROM (
               SELECT id
               FROM matriculas
@@ -101,7 +101,8 @@ public interface MatriculaRepository extends JpaRepository<Matricula, Integer> {
           ) AS sub
           WHERE m.id = sub.id
   """, nativeQuery = true)
-  int matricularPostulantes(@Param("idSeccion") Integer idSeccion, @Param("nuevasVacantes") Integer nuevasVacantes);
+  int matricularPostulantes(@Param("idSeccion") Integer idSeccion, @Param("nuevasVacantes") Integer nuevasVacantes,
+                            @Param("idEmpleado") UUID idEmpleado);
 
   @Modifying
   @Query(value = """

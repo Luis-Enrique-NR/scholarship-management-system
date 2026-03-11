@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.com.security.scholarship.domain.entity.Curso;
+import pe.com.security.scholarship.domain.entity.Empleado;
 import pe.com.security.scholarship.domain.entity.HorarioSeccion;
 import pe.com.security.scholarship.domain.entity.Seccion;
 import pe.com.security.scholarship.domain.enums.DiaSemana;
@@ -17,13 +18,16 @@ import pe.com.security.scholarship.exception.NotFoundException;
 import pe.com.security.scholarship.mapper.HorarioMapper;
 import pe.com.security.scholarship.mapper.SeccionMapper;
 import pe.com.security.scholarship.repository.CursoRepository;
+import pe.com.security.scholarship.repository.EmpleadoRepository;
 import pe.com.security.scholarship.repository.MatriculaRepository;
 import pe.com.security.scholarship.repository.SeccionRepository;
+import pe.com.security.scholarship.util.SecurityUtils;
 
 import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,6 +37,7 @@ public class SeccionService {
   private final SeccionRepository seccionRepository;
   private final CursoRepository cursoRepository;
   private final MatriculaRepository matriculaRepository;
+  private final EmpleadoRepository empleadoRepository;
 
   @Transactional
   public RegisteredSeccionResponse register(RegisterSeccionRequest request, Integer idCurso) {
@@ -93,6 +98,10 @@ public class SeccionService {
 
   @Transactional
   public UpdatedVacantesSeccionResponse updateVacantes(UpdateVacantesSeccionRequest request) {
+    UUID idUsuario = SecurityUtils.getCurrentUserId();
+    Empleado empleado = empleadoRepository.findByIdUsuario(idUsuario)
+            .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
+
     Seccion seccion = seccionRepository.findById(request.getIdSeccion())
             .orElseThrow(() -> new NotFoundException("No se encontró la sección con el ID ingresado"));
 
@@ -107,7 +116,7 @@ public class SeccionService {
     seccion.setVacantesDisponibles(request.getCantidadVacantes());
     seccionRepository.save(seccion);
 
-    int nuevosMatriculados = matriculaRepository.matricularPostulantes(request.getIdSeccion(), nuevasVacantes);
+    int nuevosMatriculados = matriculaRepository.matricularPostulantes(request.getIdSeccion(), nuevasVacantes, empleado.getId());
 
     return SeccionMapper.mapUpdatedVacantes(nuevosMatriculados, seccion.getVacantesDisponibles());
   }
